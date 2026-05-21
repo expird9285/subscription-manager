@@ -1,0 +1,149 @@
+import { CalendarClock, Plus } from "lucide-react";
+import Link from "next/link";
+
+import { Badge, MetricCard, PageHeader } from "@/components/ui";
+import { getSubscriptions } from "@/lib/dal";
+import {
+  categorySummary,
+  dueLabel,
+  formatMoney,
+  formatTotals,
+  monthlyAmount,
+  summarizeDashboard,
+} from "@/lib/subscriptions";
+
+export default async function DashboardPage() {
+  const subscriptions = await getSubscriptions();
+  const summary = summarizeDashboard(subscriptions);
+  const categories = categorySummary(subscriptions).slice(0, 6);
+
+  return (
+    <>
+      <PageHeader
+        title="대시보드"
+        description="월/연간 지출, 다음 결제일, 결제 임박 항목을 한 화면에서 확인합니다."
+        action={
+          <Link
+            href="/subscriptions/new"
+            className="inline-flex h-10 items-center justify-center gap-2 rounded-md bg-emerald-600 px-4 text-sm font-semibold text-white transition hover:bg-emerald-700"
+          >
+            <Plus className="h-4 w-4" aria-hidden="true" />
+            구독 추가
+          </Link>
+        }
+      />
+
+      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <MetricCard
+          label="이번 달 구독 지출"
+          value={formatTotals(summary.monthlyTotals).map((value) => (
+            <div key={value}>{value}</div>
+          ))}
+          detail="활성, 체험, 해지 예정 포함"
+        />
+        <MetricCard
+          label="연간 예상 지출"
+          value={formatTotals(summary.monthlyTotals, 12).map((value) => (
+            <div key={value}>{value}</div>
+          ))}
+        />
+        <MetricCard label="활성 구독 수" value={`${summary.activeCount}개`} />
+        <MetricCard
+          label="7일 내 결제 예정"
+          value={`${summary.dueSoon.length}개`}
+          detail={
+            summary.nearestDue
+              ? `${summary.nearestDue.name} ${dueLabel(summary.nearestDue.next_billing_date)}`
+              : "결제 임박 항목 없음"
+          }
+        />
+      </section>
+
+      <section className="mt-6 grid gap-6 xl:grid-cols-[1.25fr_0.75fr]">
+        <div className="rounded-lg border border-slate-200 bg-white">
+          <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
+            <h3 className="text-sm font-semibold text-slate-950">
+              곧 결제될 구독
+            </h3>
+            <CalendarClock className="h-4 w-4 text-slate-400" aria-hidden="true" />
+          </div>
+          <div className="divide-y divide-slate-100">
+            {summary.dueSoon.length ? (
+              summary.dueSoon.map((subscription) => (
+                <div
+                  key={subscription.id}
+                  className="grid gap-3 px-5 py-4 sm:grid-cols-[1fr_auto]"
+                >
+                  <div>
+                    <p className="font-semibold text-slate-950">
+                      {subscription.name}
+                    </p>
+                    <p className="mt-1 text-sm text-slate-500">
+                      {subscription.next_billing_date} ·{" "}
+                      {formatMoney(subscription.price, subscription.currency)}
+                    </p>
+                  </div>
+                  <Badge tone="amber">
+                    {dueLabel(subscription.next_billing_date)}
+                  </Badge>
+                </div>
+              ))
+            ) : (
+              <p className="px-5 py-8 text-sm text-slate-500">
+                7일 내 결제 예정 구독이 없습니다.
+              </p>
+            )}
+          </div>
+        </div>
+
+        <div className="rounded-lg border border-slate-200 bg-white">
+          <div className="border-b border-slate-100 px-5 py-4">
+            <h3 className="text-sm font-semibold text-slate-950">
+              카테고리별 월 지출
+            </h3>
+          </div>
+          <div className="divide-y divide-slate-100">
+            {categories.length ? (
+              categories.map((category) => (
+                <div
+                  key={category.category}
+                  className="flex items-center justify-between gap-4 px-5 py-4"
+                >
+                  <span className="text-sm font-medium text-slate-700">
+                    {category.category}
+                  </span>
+                  <span className="text-right text-sm font-semibold text-slate-950">
+                    {formatTotals(category.totals).join(" / ")}
+                  </span>
+                </div>
+              ))
+            ) : (
+              <p className="px-5 py-8 text-sm text-slate-500">
+                집계할 구독이 없습니다.
+              </p>
+            )}
+          </div>
+        </div>
+      </section>
+
+      <section className="mt-6 rounded-lg border border-slate-200 bg-white p-5">
+        <h3 className="text-sm font-semibold text-slate-950">월 환산 상세</h3>
+        <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+          {summary.liveSubscriptions.slice(0, 9).map((subscription) => (
+            <div
+              key={subscription.id}
+              className="flex items-center justify-between rounded-md bg-slate-50 px-3 py-3"
+            >
+              <span className="truncate text-sm font-medium text-slate-700">
+                {subscription.name}
+              </span>
+              <span className="text-sm font-semibold text-slate-950">
+                {formatMoney(monthlyAmount(subscription), subscription.currency)}
+              </span>
+            </div>
+          ))}
+        </div>
+      </section>
+    </>
+  );
+}

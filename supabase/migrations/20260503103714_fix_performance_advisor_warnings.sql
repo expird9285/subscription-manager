@@ -1,0 +1,2 @@
+-- Historical placeholder from the previous cross-browser-sync project state.
+-- The subscription-manager reset migration owns the current public schema.
