@@ -25,7 +25,7 @@ export default async function DashboardPage() {
         action={
           <Link
             href="/subscriptions/new"
-            className="inline-flex h-10 items-center justify-center gap-2 rounded-md bg-emerald-600 px-4 text-sm font-semibold text-white transition hover:bg-emerald-700"
+            className="inline-flex h-10 items-center justify-center gap-2 rounded-md bg-cyan-400 px-4 text-sm font-semibold text-zinc-950 transition hover:bg-cyan-300"
           >
             <Plus className="h-4 w-4" aria-hidden="true" />
             구독 추가
@@ -60,14 +60,14 @@ export default async function DashboardPage() {
       </section>
 
       <section className="mt-6 grid gap-6 xl:grid-cols-[1.25fr_0.75fr]">
-        <div className="rounded-lg border border-slate-200 bg-white">
-          <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
-            <h3 className="text-sm font-semibold text-slate-950">
+        <div className="rounded-lg border border-white/10 bg-zinc-900">
+          <div className="flex items-center justify-between border-b border-white/10 px-5 py-4">
+            <h3 className="text-sm font-semibold text-zinc-50">
               곧 결제될 구독
             </h3>
-            <CalendarClock className="h-4 w-4 text-slate-400" aria-hidden="true" />
+            <CalendarClock className="h-4 w-4 text-zinc-500" aria-hidden="true" />
           </div>
-          <div className="divide-y divide-slate-100">
+          <div className="divide-y divide-white/10">
             {summary.dueSoon.length ? (
               summary.dueSoon.map((subscription) => (
                 <div
@@ -75,10 +75,10 @@ export default async function DashboardPage() {
                   className="grid gap-3 px-5 py-4 sm:grid-cols-[1fr_auto]"
                 >
                   <div>
-                    <p className="font-semibold text-slate-950">
+                    <p className="font-semibold text-zinc-50">
                       {subscription.name}
                     </p>
-                    <p className="mt-1 text-sm text-slate-500">
+                    <p className="mt-1 text-sm text-zinc-500">
                       {subscription.next_billing_date} ·{" "}
                       {formatMoney(subscription.price, subscription.currency)}
                     </p>
@@ -89,36 +89,36 @@ export default async function DashboardPage() {
                 </div>
               ))
             ) : (
-              <p className="px-5 py-8 text-sm text-slate-500">
+              <p className="px-5 py-8 text-sm text-zinc-500">
                 7일 내 결제 예정 구독이 없습니다.
               </p>
             )}
           </div>
         </div>
 
-        <div className="rounded-lg border border-slate-200 bg-white">
-          <div className="border-b border-slate-100 px-5 py-4">
-            <h3 className="text-sm font-semibold text-slate-950">
+        <div className="rounded-lg border border-white/10 bg-zinc-900">
+          <div className="border-b border-white/10 px-5 py-4">
+            <h3 className="text-sm font-semibold text-zinc-50">
               카테고리별 월 지출
             </h3>
           </div>
-          <div className="divide-y divide-slate-100">
+          <div className="divide-y divide-white/10">
             {categories.length ? (
               categories.map((category) => (
                 <div
                   key={category.category}
                   className="flex items-center justify-between gap-4 px-5 py-4"
                 >
-                  <span className="text-sm font-medium text-slate-700">
+                  <span className="text-sm font-medium text-zinc-300">
                     {category.category}
                   </span>
-                  <span className="text-right text-sm font-semibold text-slate-950">
+                  <span className="text-right text-sm font-semibold text-zinc-50">
                     {formatTotals(category.totals).join(" / ")}
                   </span>
                 </div>
               ))
             ) : (
-              <p className="px-5 py-8 text-sm text-slate-500">
+              <p className="px-5 py-8 text-sm text-zinc-500">
                 집계할 구독이 없습니다.
               </p>
             )}
@@ -126,18 +126,18 @@ export default async function DashboardPage() {
         </div>
       </section>
 
-      <section className="mt-6 rounded-lg border border-slate-200 bg-white p-5">
-        <h3 className="text-sm font-semibold text-slate-950">월 환산 상세</h3>
+      <section className="mt-6 rounded-lg border border-white/10 bg-zinc-900 p-5">
+        <h3 className="text-sm font-semibold text-zinc-50">월 환산 상세</h3>
         <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
           {summary.liveSubscriptions.slice(0, 9).map((subscription) => (
             <div
               key={subscription.id}
-              className="flex items-center justify-between rounded-md bg-slate-50 px-3 py-3"
+              className="flex items-center justify-between rounded-md bg-zinc-950 px-3 py-3"
             >
-              <span className="truncate text-sm font-medium text-slate-700">
+              <span className="truncate text-sm font-medium text-zinc-300">
                 {subscription.name}
               </span>
-              <span className="text-sm font-semibold text-slate-950">
+              <span className="text-sm font-semibold text-zinc-50">
                 {formatMoney(monthlyAmount(subscription), subscription.currency)}
               </span>
             </div>

@@ -13,11 +13,11 @@ export function PageHeader({
   return (
     <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
       <div>
-        <h2 className="text-2xl font-semibold tracking-tight text-slate-950">
+        <h2 className="text-2xl font-semibold tracking-tight text-zinc-50">
           {title}
         </h2>
         {description ? (
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-400">
             {description}
           </p>
         ) : null}
@@ -39,11 +39,11 @@ export function Button({
       className={clsx(
         "inline-flex h-10 items-center justify-center gap-2 rounded-md px-4 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-60",
         variant === "primary" &&
-          "bg-emerald-600 text-white hover:bg-emerald-700",
+          "bg-cyan-400 text-zinc-950 hover:bg-cyan-300",
         variant === "secondary" &&
-          "border border-slate-200 bg-white text-slate-800 hover:bg-slate-50",
-        variant === "danger" && "bg-rose-600 text-white hover:bg-rose-700",
-        variant === "ghost" && "text-slate-700 hover:bg-slate-100",
+          "border border-white/10 bg-zinc-900 text-zinc-100 hover:bg-zinc-800",
+        variant === "danger" && "bg-rose-500 text-white hover:bg-rose-400",
+        variant === "ghost" && "text-zinc-300 hover:bg-zinc-900",
         className,
       )}
       {...props}
@@ -63,9 +63,9 @@ export function LinkButton({
       className={clsx(
         "inline-flex h-10 items-center justify-center gap-2 rounded-md px-4 text-sm font-semibold transition",
         variant === "primary" &&
-          "bg-emerald-600 text-white hover:bg-emerald-700",
+          "bg-cyan-400 text-zinc-950 hover:bg-cyan-300",
         variant === "secondary" &&
-          "border border-slate-200 bg-white text-slate-800 hover:bg-slate-50",
+          "border border-white/10 bg-zinc-900 text-zinc-100 hover:bg-zinc-800",
         className,
       )}
       {...props}
@@ -81,7 +81,7 @@ export function Field({
   children: React.ReactNode;
 }) {
   return (
-    <label className="grid gap-2 text-sm font-medium text-slate-700">
+    <label className="grid gap-2 text-sm font-medium text-zinc-300">
       <span>{label}</span>
       {children}
     </label>
@@ -89,10 +89,10 @@ export function Field({
 }
 
 export const inputClass =
-  "h-10 rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100";
+  "h-10 rounded-md border border-white/10 bg-zinc-950 px-3 text-sm text-zinc-50 outline-none transition placeholder:text-zinc-600 focus:border-cyan-300 focus:ring-4 focus:ring-cyan-400/15";
 
 export const textareaClass =
-  "min-h-28 rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100";
+  "min-h-28 rounded-md border border-white/10 bg-zinc-950 px-3 py-2 text-sm text-zinc-50 outline-none transition placeholder:text-zinc-600 focus:border-cyan-300 focus:ring-4 focus:ring-cyan-400/15";
 
 export function MetricCard({
   label,
@@ -104,12 +104,12 @@ export function MetricCard({
   detail?: string;
 }) {
   return (
-    <div className="rounded-lg border border-slate-200 bg-white p-5">
-      <p className="text-sm font-medium text-slate-500">{label}</p>
-      <div className="mt-3 text-2xl font-semibold tracking-tight text-slate-950">
+    <div className="rounded-lg border border-white/10 bg-zinc-900/80 p-5 shadow-sm shadow-black/20">
+      <p className="text-sm font-medium text-zinc-500">{label}</p>
+      <div className="mt-3 text-2xl font-semibold tracking-tight text-zinc-50">
         {value}
       </div>
-      {detail ? <p className="mt-2 text-sm text-slate-500">{detail}</p> : null}
+      {detail ? <p className="mt-2 text-sm text-zinc-500">{detail}</p> : null}
     </div>
   );
 }
@@ -125,11 +125,11 @@ export function Badge({
     <span
       className={clsx(
         "inline-flex h-7 items-center rounded-md px-2 text-xs font-semibold",
-        tone === "slate" && "bg-slate-100 text-slate-700",
-        tone === "emerald" && "bg-emerald-50 text-emerald-700",
-        tone === "amber" && "bg-amber-50 text-amber-700",
-        tone === "rose" && "bg-rose-50 text-rose-700",
-        tone === "sky" && "bg-sky-50 text-sky-700",
+        tone === "slate" && "bg-zinc-800 text-zinc-300",
+        tone === "emerald" && "bg-emerald-400/10 text-emerald-200",
+        tone === "amber" && "bg-amber-400/10 text-amber-200",
+        tone === "rose" && "bg-rose-500/10 text-rose-200",
+        tone === "sky" && "bg-sky-400/10 text-sky-200",
       )}
     >
       {children}

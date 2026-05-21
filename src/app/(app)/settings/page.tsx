@@ -2,6 +2,7 @@ import { CheckCircle2, Database, KeyRound, ShieldCheck } from "lucide-react";
 
 import { Badge, PageHeader } from "@/components/ui";
 import { getCurrentUser } from "@/lib/dal";
+import { getDiscordUserId } from "@/lib/env";
 
 export default async function SettingsPage() {
   const user = await getCurrentUser();
@@ -11,6 +12,7 @@ export default async function SettingsPage() {
     : "NEXT_PUBLIC_SUPABASE_ANON_KEY";
   const hasServiceRole = Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY);
   const hasDiscordWebhook = Boolean(process.env.DISCORD_WEBHOOK_URL);
+  const discordId = getDiscordUserId(user);
 
   return (
     <>
@@ -34,7 +36,12 @@ export default async function SettingsPage() {
           title="접근 제어"
           rows={[
             ["현재 사용자", user.email ?? user.id],
-            ["ALLOWED_EMAILS", process.env.ALLOWED_EMAILS ? "사용 중" : "미사용"],
+            ["Discord ID", discordId ?? "확인 불가"],
+            [
+              "ALLOWED_DISCORD_IDS",
+              process.env.ALLOWED_DISCORD_IDS ? "사용 중" : "미사용",
+            ],
+            ["ALLOWED_EMAILS", process.env.ALLOWED_EMAILS ? "보조 사용" : "미사용"],
             ["RLS", "subscriptions / notification_logs 활성화"],
           ]}
         />
@@ -46,13 +53,14 @@ export default async function SettingsPage() {
             ["DISCORD_WEBHOOK_URL", hasDiscordWebhook ? "설정됨" : "미사용"],
           ]}
         />
-        <section className="rounded-lg border border-slate-200 bg-white p-5">
+        <section className="rounded-lg border border-white/10 bg-zinc-900 p-5">
           <div className="mb-4 flex items-center gap-3">
-            <CheckCircle2 className="h-5 w-5 text-emerald-600" />
-            <h3 className="text-sm font-semibold text-slate-950">현재 상태</h3>
+            <CheckCircle2 className="h-5 w-5 text-cyan-300" />
+            <h3 className="text-sm font-semibold text-zinc-50">현재 상태</h3>
           </div>
           <div className="flex flex-wrap gap-2">
             <Badge tone="emerald">로그인 필요</Badge>
+            <Badge tone="emerald">Discord OAuth only</Badge>
             <Badge tone="emerald">RLS 적용</Badge>
             <Badge tone="emerald">Public key only in browser</Badge>
             <Badge tone={hasServiceRole ? "emerald" : "amber"}>
@@ -75,19 +83,19 @@ function SettingBlock({
   rows: [string, string][];
 }) {
   return (
-    <section className="rounded-lg border border-slate-200 bg-white p-5">
-      <div className="mb-4 flex items-center gap-3 text-slate-950">
-        <div className="text-emerald-700">{icon}</div>
+    <section className="rounded-lg border border-white/10 bg-zinc-900 p-5">
+      <div className="mb-4 flex items-center gap-3 text-zinc-50">
+        <div className="text-cyan-300">{icon}</div>
         <h3 className="text-sm font-semibold">{title}</h3>
       </div>
       <dl className="grid gap-3">
         {rows.map(([label, value]) => (
           <div
             key={label}
-            className="grid gap-1 border-t border-slate-100 pt-3 sm:grid-cols-[180px_1fr]"
+            className="grid gap-1 border-t border-white/10 pt-3 sm:grid-cols-[180px_1fr]"
           >
-            <dt className="text-sm font-medium text-slate-500">{label}</dt>
-            <dd className="break-all text-sm font-semibold text-slate-900">
+            <dt className="text-sm font-medium text-zinc-500">{label}</dt>
+            <dd className="break-all text-sm font-semibold text-zinc-100">
               {value}
             </dd>
           </div>

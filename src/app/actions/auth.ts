@@ -1,52 +1,52 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
-import { isAllowedEmail } from "@/lib/env";
 import { createClient } from "@/lib/supabase/server";
 
-function credentialsFromForm(formData: FormData) {
-  const email = String(formData.get("email") ?? "").trim().toLowerCase();
-  const password = String(formData.get("password") ?? "");
-
-  if (!email || !password) {
-    redirect("/login?error=missing");
-  }
-
-  if (!isAllowedEmail(email)) {
-    redirect("/login?error=not_allowed");
-  }
-
-  return { email, password };
+function safeNext(value: FormDataEntryValue | string | null) {
+  const next = String(value ?? "/dashboard");
+  return next.startsWith("/") ? next : "/dashboard";
 }
 
-export async function login(formData: FormData) {
-  const supabase = await createClient();
-  const next = String(formData.get("next") ?? "/dashboard");
-  const credentials = credentialsFromForm(formData);
+async function getOrigin() {
+  const headerStore = await headers();
+  const origin = headerStore.get("origin");
 
-  const { error } = await supabase.auth.signInWithPassword(credentials);
-
-  if (error) {
-    redirect("/login?error=invalid");
+  if (origin) {
+    return origin;
   }
 
-  revalidatePath("/", "layout");
-  redirect(next.startsWith("/") ? next : "/dashboard");
+  const host = headerStore.get("x-forwarded-host") ?? headerStore.get("host");
+  const proto = headerStore.get("x-forwarded-proto") ?? "https";
+
+  if (host) {
+    return `${proto}://${host}`;
+  }
+
+  return process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
 }
 
-export async function signup(formData: FormData) {
+export async function signInWithDiscord(formData: FormData) {
   const supabase = await createClient();
-  const credentials = credentialsFromForm(formData);
+  const next = safeNext(formData.get("next"));
+  const origin = await getOrigin();
 
-  const { error } = await supabase.auth.signUp(credentials);
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: "discord",
+    options: {
+      redirectTo: `${origin}/auth/callback?next=${encodeURIComponent(next)}`,
+      scopes: "identify email",
+    },
+  });
 
-  if (error) {
-    redirect("/login?error=signup");
+  if (error || !data.url) {
+    redirect("/login?error=discord");
   }
 
-  redirect("/login?message=check_email");
+  redirect(data.url);
 }
 
 export async function logout() {

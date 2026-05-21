@@ -4,7 +4,7 @@ import { cache } from "react";
 import { redirect } from "next/navigation";
 
 import type { Subscription } from "@/lib/database.types";
-import { isAllowedEmail } from "@/lib/env";
+import { isAllowedAuthUser } from "@/lib/env";
 import { createClient } from "@/lib/supabase/server";
 
 export const getCurrentUser = cache(async () => {
@@ -13,8 +13,12 @@ export const getCurrentUser = cache(async () => {
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (!user || !isAllowedEmail(user.email)) {
+  if (!user) {
     redirect("/login");
+  }
+
+  if (!isAllowedAuthUser(user)) {
+    redirect("/login?error=not_allowed");
   }
 
   return user;

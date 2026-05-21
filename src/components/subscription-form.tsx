@@ -16,7 +16,7 @@ export function SubscriptionForm({
 }) {
   return (
     <form action={action} className="grid gap-6">
-      <section className="grid gap-4 rounded-lg border border-slate-200 bg-white p-5">
+      <section className="grid gap-4 rounded-lg border border-white/10 bg-zinc-900 p-5">
         <div className="grid gap-4 md:grid-cols-2">
           <Field label="서비스 이름">
             <input
@@ -107,9 +107,9 @@ export function SubscriptionForm({
           </Field>
         </div>
 
-        <label className="flex items-center gap-3 text-sm font-medium text-slate-700">
+        <label className="flex items-center gap-3 text-sm font-medium text-zinc-300">
           <input
-            className="h-4 w-4 rounded border-slate-300 text-emerald-600"
+            className="h-4 w-4 rounded border-white/15 text-cyan-300"
             type="checkbox"
             name="auto_renew"
             defaultChecked={subscription?.auto_renew ?? true}

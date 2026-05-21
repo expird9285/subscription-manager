@@ -37,7 +37,7 @@ export default async function SubscriptionsPage({
         action={
           <Link
             href="/subscriptions/new"
-            className="inline-flex h-10 items-center justify-center gap-2 rounded-md bg-emerald-600 px-4 text-sm font-semibold text-white transition hover:bg-emerald-700"
+            className="inline-flex h-10 items-center justify-center gap-2 rounded-md bg-cyan-400 px-4 text-sm font-semibold text-zinc-950 transition hover:bg-cyan-300"
           >
             <Plus className="h-4 w-4" aria-hidden="true" />
             추가

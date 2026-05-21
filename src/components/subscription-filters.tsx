@@ -17,10 +17,10 @@ export function SubscriptionFilters({
   };
 }) {
   return (
-    <form className="mb-4 grid gap-3 rounded-lg border border-slate-200 bg-white p-4 lg:grid-cols-[1.5fr_1fr_1fr_1fr_1fr_auto]">
+    <form className="mb-4 grid gap-3 rounded-lg border border-white/10 bg-zinc-900 p-4 lg:grid-cols-[1.5fr_1fr_1fr_1fr_1fr_auto]">
       <label className="relative">
         <Search
-          className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-slate-400"
+          className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-zinc-500"
           aria-hidden="true"
         />
         <input

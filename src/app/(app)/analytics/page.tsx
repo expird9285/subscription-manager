@@ -132,13 +132,13 @@ export default async function AnalyticsPage() {
         </Panel>
       </section>
 
-      <section className="mt-6 rounded-lg border border-slate-200 bg-white">
-        <div className="border-b border-slate-100 px-5 py-4">
-          <h3 className="text-sm font-semibold text-slate-950">
+      <section className="mt-6 rounded-lg border border-white/10 bg-zinc-900">
+        <div className="border-b border-white/10 px-5 py-4">
+          <h3 className="text-sm font-semibold text-zinc-50">
             해지 예정 서비스
           </h3>
         </div>
-        <div className="divide-y divide-slate-100">
+        <div className="divide-y divide-white/10">
           {cancelPending.length ? (
             cancelPending.map((subscription) => (
               <div
@@ -146,10 +146,10 @@ export default async function AnalyticsPage() {
                 className="flex items-center justify-between gap-4 px-5 py-4"
               >
                 <div>
-                  <p className="text-sm font-semibold text-slate-950">
+                  <p className="text-sm font-semibold text-zinc-50">
                     {subscription.name}
                   </p>
-                  <p className="mt-1 text-sm text-slate-500">
+                  <p className="mt-1 text-sm text-zinc-500">
                     {subscription.memo || "메모 없음"}
                   </p>
                 </div>
@@ -175,12 +175,12 @@ function Panel({
   children: React.ReactNode;
 }) {
   return (
-    <section className="rounded-lg border border-slate-200 bg-white">
-      <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
-        <h3 className="text-sm font-semibold text-slate-950">{title}</h3>
-        <div className="text-slate-400">{icon}</div>
+    <section className="rounded-lg border border-white/10 bg-zinc-900">
+      <div className="flex items-center justify-between border-b border-white/10 px-5 py-4">
+        <h3 className="text-sm font-semibold text-zinc-50">{title}</h3>
+        <div className="text-zinc-500">{icon}</div>
       </div>
-      <div className="divide-y divide-slate-100">{children}</div>
+      <div className="divide-y divide-white/10">{children}</div>
     </section>
   );
 }
@@ -188,10 +188,10 @@ function Panel({
 function Row({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-center justify-between gap-4 px-5 py-4">
-      <span className="truncate text-sm font-medium text-slate-700">
+      <span className="truncate text-sm font-medium text-zinc-300">
         {label}
       </span>
-      <span className="shrink-0 text-right text-sm font-semibold text-slate-950">
+      <span className="shrink-0 text-right text-sm font-semibold text-zinc-50">
         {value}
       </span>
     </div>
@@ -199,5 +199,5 @@ function Row({ label, value }: { label: string; value: string }) {
 }
 
 function Empty() {
-  return <p className="px-5 py-8 text-sm text-slate-500">데이터가 없습니다.</p>;
+  return <p className="px-5 py-8 text-sm text-zinc-500">데이터가 없습니다.</p>;
 }

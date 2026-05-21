@@ -26,16 +26,16 @@ export function AppShell({
 }) {
   return (
     <div className="min-h-screen lg:grid lg:grid-cols-[260px_1fr]">
-      <aside className="border-b border-slate-200 bg-white lg:min-h-screen lg:border-b-0 lg:border-r">
+      <aside className="border-b border-white/10 bg-zinc-900 lg:min-h-screen lg:border-b-0 lg:border-r">
         <div className="flex h-full flex-col gap-5 p-4 lg:p-6">
           <div>
             <Link href="/dashboard" className="block">
-              <p className="text-sm font-medium text-emerald-700">개인 구독 관리</p>
+              <p className="text-sm font-medium text-cyan-300">개인 구독 관리</p>
               <h1 className="mt-1 text-xl font-semibold tracking-tight">
                 Subscription Manager
               </h1>
             </Link>
-            <p className="mt-2 truncate text-sm text-slate-500">{user.email}</p>
+            <p className="mt-2 truncate text-sm text-zinc-500">{user.email}</p>
           </div>
 
           <nav className="grid gap-1 sm:grid-cols-5 lg:grid-cols-1">
@@ -46,7 +46,7 @@ export function AppShell({
                 <Link
                   key={item.href}
                   href={item.href}
-                  className="flex h-10 items-center gap-3 rounded-md px-3 text-sm font-medium text-slate-700 transition hover:bg-slate-100 hover:text-slate-950"
+                  className="flex h-10 items-center gap-3 rounded-md px-3 text-sm font-medium text-zinc-300 transition hover:bg-zinc-800 hover:text-zinc-50"
                 >
                   <Icon className="h-4 w-4" aria-hidden="true" />
                   <span>{item.label}</span>
@@ -56,7 +56,7 @@ export function AppShell({
           </nav>
 
           <form action="/auth/signout" method="post" className="mt-auto">
-            <button className="flex h-10 w-full items-center gap-3 rounded-md px-3 text-sm font-medium text-slate-600 transition hover:bg-rose-50 hover:text-rose-700">
+            <button className="flex h-10 w-full items-center gap-3 rounded-md px-3 text-sm font-medium text-zinc-400 transition hover:bg-rose-500/10 hover:text-rose-200">
               <LogOut className="h-4 w-4" aria-hidden="true" />
               로그아웃
             </button>

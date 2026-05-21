@@ -2,7 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
 import type { Database } from "@/lib/database.types";
-import { hasSupabaseConfig, isAllowedEmail } from "@/lib/env";
+import { hasSupabaseConfig, isAllowedAuthUser } from "@/lib/env";
 
 const protectedPrefixes = [
   "/dashboard",
@@ -53,12 +53,15 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const isSignedIn = Boolean(user && isAllowedEmail(user.email));
+  const isSignedIn = isAllowedAuthUser(user);
 
   if (isProtected(pathname) && !isSignedIn) {
     const loginUrl = request.nextUrl.clone();
     loginUrl.pathname = "/login";
     loginUrl.searchParams.set("next", pathname);
+    if (user) {
+      loginUrl.searchParams.set("error", "not_allowed");
+    }
     return NextResponse.redirect(loginUrl);
   }
 

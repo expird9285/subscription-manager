@@ -28,7 +28,7 @@ export default async function EditSubscriptionPage({
         action={
           <Link
             href="/subscriptions"
-            className="inline-flex h-10 items-center justify-center rounded-md border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-800 transition hover:bg-slate-50"
+            className="inline-flex h-10 items-center justify-center rounded-md border border-white/10 bg-zinc-900 px-4 text-sm font-semibold text-zinc-200 transition hover:bg-zinc-950"
           >
             목록으로
           </Link>
