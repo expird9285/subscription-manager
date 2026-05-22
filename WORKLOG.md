@@ -2,6 +2,23 @@
 
 ## 2026-05-22
 
+### Vercel Preview Deploy
+
+- Committed `subscription-assistant/README.md` setup-guide changes in `c557f3f` (`Document Discord assistant setup`).
+- Used the Vercel plugin flow and local Vercel CLI to deploy the current project as a preview deployment.
+- First preview deployment `dpl_95ZqtxxSvGQQHeWWWYsR8gnVMiUw` failed because Vercel Preview did not have the public Supabase environment variables available at build time.
+- Confirmed the failing log line: `Missing Supabase public environment variables. Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY.`
+- Re-ran preview deployment with public Supabase build/runtime environment variables passed directly to the Vercel CLI.
+- Successful preview deployment: `dpl_DTb1rxgT6wVac3nnuJ7LKXbtWVJD`.
+- Preview URL: `https://subscription-manager-6f9dhafyt-galaxytabion2-6110s-projects.vercel.app`.
+- Vercel inspector URL: `https://vercel.com/galaxytabion2-6110s-projects/subscription-manager/DTb1rxgT6wVac3nnuJ7LKXbtWVJD`.
+
+### Current State
+
+- Local branch `main` is ahead of `origin/main` with the recent local commits.
+- Vercel Preview deploy is ready.
+- Preview deploy currently depends on CLI-passed public Supabase env values because project-level Preview env registration was blocked by the project having no connected Git repository.
+
 ### Desktop Sidebar Collapse
 
 - Updated desktop navigation so the PC sidebar can collapse and expand independently from the mobile menu.
