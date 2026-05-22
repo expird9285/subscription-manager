@@ -2,6 +2,20 @@
 
 ## 2026-05-22
 
+### Desktop Sidebar Collapse
+
+- Updated desktop navigation so the PC sidebar can collapse and expand independently from the mobile menu.
+- Changed the app shell desktop grid from a fixed `260px` sidebar column to an `auto` sidebar column so the main content follows the sidebar width.
+- Collapsed desktop state now shows a 72px icon rail with accessible hidden labels and tooltips.
+- Expanded desktop state keeps the existing brand, user email, navigation labels, and logout layout.
+- Ran `npm run lint`: passed.
+- Ran `npm run build` with public Supabase environment variables: passed.
+
+### Current State
+
+- Desktop and mobile navigation both support open/close behavior.
+- `subscription-assistant/README.md` still has an unrelated unstaged change and was not touched by this update.
+
 ### Mobile Navigation And KRW Estimates
 
 - Updated the app shell so mobile/tablet widths show a compact top bar with a sandwich menu button instead of the full navigation stack.

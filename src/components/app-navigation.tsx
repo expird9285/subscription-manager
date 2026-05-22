@@ -25,6 +25,7 @@ const navigation = [
 
 export function AppNavigation({ email }: { email?: string | null }) {
   const [isOpen, setIsOpen] = useState(false);
+  const [isDesktopCollapsed, setIsDesktopCollapsed] = useState(false);
   const pathname = usePathname();
 
   return (
@@ -71,8 +72,18 @@ export function AppNavigation({ email }: { email?: string | null }) {
         </div>
       </header>
 
-      <aside className="hidden border-r border-white/10 bg-zinc-900 lg:block lg:min-h-screen">
-        <NavigationContent email={email} pathname={pathname} />
+      <aside
+        className={clsx(
+          "hidden border-r border-white/10 bg-zinc-900 transition-[width] duration-200 lg:block lg:min-h-screen",
+          isDesktopCollapsed ? "lg:w-[72px]" : "lg:w-64",
+        )}
+      >
+        <NavigationContent
+          email={email}
+          pathname={pathname}
+          collapsed={isDesktopCollapsed}
+          onToggleCollapsed={() => setIsDesktopCollapsed((value) => !value)}
+        />
       </aside>
     </>
   );
@@ -82,24 +93,60 @@ function NavigationContent({
   email,
   pathname,
   onNavigate,
+  onToggleCollapsed,
   compact = false,
+  collapsed = false,
 }: {
   email?: string | null;
   pathname: string;
   onNavigate?: () => void;
+  onToggleCollapsed?: () => void;
   compact?: boolean;
+  collapsed?: boolean;
 }) {
   return (
-    <div className={clsx("flex h-full flex-col gap-5", compact ? "p-4" : "p-6")}>
-      <div className={compact ? "hidden" : undefined}>
-        <Link href="/dashboard" className="block" onClick={onNavigate}>
-          <p className="text-sm font-medium text-cyan-300">개인 구독 관리</p>
-          <h1 className="mt-1 text-xl font-semibold tracking-tight">
-            Subscription Manager
-          </h1>
-        </Link>
-        <p className="mt-2 truncate text-sm text-zinc-500">{email}</p>
-      </div>
+    <div
+      className={clsx(
+        "flex h-full flex-col gap-5",
+        compact ? "p-4" : collapsed ? "p-3" : "p-6",
+      )}
+    >
+      {!compact ? (
+        <div
+          className={clsx(
+            "flex items-start gap-3",
+            collapsed ? "justify-center" : "justify-between",
+          )}
+        >
+          {collapsed ? null : (
+            <div className="min-w-0">
+              <Link href="/dashboard" className="block" onClick={onNavigate}>
+                <p className="text-sm font-medium text-cyan-300">
+                  개인 구독 관리
+                </p>
+                <h1 className="mt-1 truncate text-xl font-semibold tracking-tight">
+                  Subscription Manager
+                </h1>
+              </Link>
+              <p className="mt-2 truncate text-sm text-zinc-500">{email}</p>
+            </div>
+          )}
+
+          <button
+            className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-white/10 text-zinc-100 transition hover:bg-zinc-800"
+            type="button"
+            aria-label={collapsed ? "사이드바 펼치기" : "사이드바 접기"}
+            aria-expanded={!collapsed}
+            onClick={onToggleCollapsed}
+          >
+            {collapsed ? (
+              <Menu className="h-5 w-5" aria-hidden="true" />
+            ) : (
+              <X className="h-5 w-5" aria-hidden="true" />
+            )}
+          </button>
+        </div>
+      ) : null}
 
       {compact && email ? (
         <p className="truncate text-sm text-zinc-500">{email}</p>
@@ -116,24 +163,34 @@ function NavigationContent({
               key={item.href}
               href={item.href}
               onClick={onNavigate}
+              title={collapsed ? item.label : undefined}
               className={clsx(
-                "flex h-10 items-center gap-3 rounded-md px-3 text-sm font-medium transition",
+                "flex h-10 items-center rounded-md text-sm font-medium transition",
+                collapsed ? "justify-center px-0" : "gap-3 px-3",
                 isActive
                   ? "bg-zinc-800 text-zinc-50"
                   : "text-zinc-300 hover:bg-zinc-800 hover:text-zinc-50",
               )}
             >
-              <Icon className="h-4 w-4" aria-hidden="true" />
-              <span>{item.label}</span>
+              <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
+              <span className={collapsed ? "sr-only" : undefined}>
+                {item.label}
+              </span>
             </Link>
           );
         })}
       </nav>
 
       <form action="/auth/signout" method="post" className="mt-auto">
-        <button className="flex h-10 w-full items-center gap-3 rounded-md px-3 text-sm font-medium text-zinc-400 transition hover:bg-rose-500/10 hover:text-rose-200">
-          <LogOut className="h-4 w-4" aria-hidden="true" />
-          로그아웃
+        <button
+          className={clsx(
+            "flex h-10 w-full items-center rounded-md text-sm font-medium text-zinc-400 transition hover:bg-rose-500/10 hover:text-rose-200",
+            collapsed ? "justify-center px-0" : "gap-3 px-3",
+          )}
+          title={collapsed ? "로그아웃" : undefined}
+        >
+          <LogOut className="h-4 w-4 shrink-0" aria-hidden="true" />
+          <span className={collapsed ? "sr-only" : undefined}>로그아웃</span>
         </button>
       </form>
     </div>

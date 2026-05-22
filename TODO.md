@@ -12,7 +12,7 @@
 - Re-run `npm run lint` after code changes.
 - Re-run `npm run build` with required public Supabase environment variables after frontend or Next.js changes.
 - Re-run `python -m compileall subscription-assistant` after Python assistant changes.
-- Add browser automation tooling or a manual QA pass for the mobile sandwich menu open/close interaction.
+- Add browser automation tooling or a manual QA pass for the mobile and desktop menu open/close interactions.
 
 ## Operating Rule
 
