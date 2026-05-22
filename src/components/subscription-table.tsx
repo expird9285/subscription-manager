@@ -15,6 +15,8 @@ import {
   monthlyAmount,
   statusLabels,
 } from "@/lib/subscriptions";
+import type { ExchangeRates } from "@/lib/exchange-rates";
+import { formatKrwEstimate } from "@/lib/exchange-rates";
 
 function statusTone(status: Subscription["status"]): "slate" | "emerald" | "amber" | "rose" | "sky" {
   switch (status) {
@@ -33,8 +35,10 @@ function statusTone(status: Subscription["status"]): "slate" | "emerald" | "ambe
 
 export function SubscriptionTable({
   subscriptions,
+  exchangeRates,
 }: {
   subscriptions: Subscription[];
+  exchangeRates: ExchangeRates;
 }) {
   if (!subscriptions.length) {
     return (
@@ -79,9 +83,19 @@ export function SubscriptionTable({
               </td>
               <td className="px-4 py-3 text-zinc-300">
                 {formatMoney(subscription.price, subscription.currency)}
+                <KrwEstimate
+                  amount={subscription.price}
+                  currency={subscription.currency}
+                  exchangeRates={exchangeRates}
+                />
               </td>
               <td className="px-4 py-3 text-zinc-300">
                 {formatMoney(monthlyAmount(subscription), subscription.currency)}
+                <KrwEstimate
+                  amount={monthlyAmount(subscription)}
+                  currency={subscription.currency}
+                  exchangeRates={exchangeRates}
+                />
               </td>
               <td className="px-4 py-3 text-zinc-400">
                 {billingCycleLabels[subscription.billing_cycle]}
@@ -160,4 +174,20 @@ export function SubscriptionTable({
       </table>
     </div>
   );
+}
+
+function KrwEstimate({
+  amount,
+  currency,
+  exchangeRates,
+}: {
+  amount: number | string;
+  currency: string;
+  exchangeRates: ExchangeRates;
+}) {
+  const estimate = formatKrwEstimate(Number(amount), currency, exchangeRates);
+
+  return estimate ? (
+    <div className="mt-1 text-xs font-medium text-cyan-200">{estimate}</div>
+  ) : null;
 }

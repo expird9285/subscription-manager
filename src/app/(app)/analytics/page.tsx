@@ -3,6 +3,13 @@ import { BarChart3, CalendarDays, Crown, PieChart } from "lucide-react";
 import { Badge, MetricCard, PageHeader } from "@/components/ui";
 import { getSubscriptions } from "@/lib/dal";
 import {
+  convertTotalsToKrw,
+  exchangeRateDetail,
+  formatKrwEstimate,
+  getExchangeRates,
+  hasForeignCurrency,
+} from "@/lib/exchange-rates";
+import {
   billingCycleLabels,
   categorySummary,
   formatMoney,
@@ -13,7 +20,10 @@ import {
 } from "@/lib/subscriptions";
 
 export default async function AnalyticsPage() {
-  const subscriptions = await getSubscriptions();
+  const [subscriptions, exchangeRates] = await Promise.all([
+    getSubscriptions(),
+    getExchangeRates(),
+  ]);
   const liveSubscriptions = subscriptions.filter((subscription) =>
     liveStatuses.includes(subscription.status),
   );
@@ -38,6 +48,7 @@ export default async function AnalyticsPage() {
   const cancelPending = subscriptions.filter(
     (subscription) => subscription.status === "cancel_pending",
   );
+  const rateDetail = exchangeRateDetail(exchangeRates);
 
   return (
     <>
@@ -62,13 +73,22 @@ export default async function AnalyticsPage() {
           label="최고 월 환산"
           value={
             topExpensive[0]
-              ? formatMoney(
-                  monthlyAmount(topExpensive[0]),
-                  topExpensive[0].currency,
+              ? (
+                  <div>
+                    {formatMoney(
+                      monthlyAmount(topExpensive[0]),
+                      topExpensive[0].currency,
+                    )}
+                    <KrwEstimate
+                      amount={monthlyAmount(topExpensive[0])}
+                      currency={topExpensive[0].currency}
+                      exchangeRates={exchangeRates}
+                    />
+                  </div>
                 )
               : formatMoney(0)
           }
-          detail={topExpensive[0]?.name}
+          detail={topExpensive[0] ? `${topExpensive[0].name} · ${rateDetail}` : rateDetail}
         />
       </section>
 
@@ -79,7 +99,9 @@ export default async function AnalyticsPage() {
               <Row
                 key={item.category}
                 label={item.category}
-                value={formatTotals(item.totals).join(" / ")}
+                value={
+                  <MoneyValue totals={item.totals} exchangeRates={exchangeRates} />
+                }
               />
             ))
           ) : (
@@ -97,6 +119,11 @@ export default async function AnalyticsPage() {
                   monthlyAmount(subscription),
                   subscription.currency,
                 )}
+                detail={formatKrwEstimate(
+                  monthlyAmount(subscription),
+                  subscription.currency,
+                  exchangeRates,
+                )}
               />
             ))
           ) : (
@@ -110,7 +137,7 @@ export default async function AnalyticsPage() {
               <Row
                 key={cycle}
                 label={cycle}
-                value={formatTotals(totals).join(" / ")}
+                value={<MoneyValue totals={totals} exchangeRates={exchangeRates} />}
               />
             ))
           ) : (
@@ -126,7 +153,7 @@ export default async function AnalyticsPage() {
             <Row
               key={item.key}
               label={item.key}
-              value={formatTotals(item.totals).join(" / ")}
+              value={<MoneyValue totals={item.totals} exchangeRates={exchangeRates} />}
             />
           ))}
         </Panel>
@@ -185,7 +212,15 @@ function Panel({
   );
 }
 
-function Row({ label, value }: { label: string; value: string }) {
+function Row({
+  label,
+  value,
+  detail,
+}: {
+  label: string;
+  value: React.ReactNode;
+  detail?: React.ReactNode;
+}) {
   return (
     <div className="flex items-center justify-between gap-4 px-5 py-4">
       <span className="truncate text-sm font-medium text-zinc-300">
@@ -193,6 +228,11 @@ function Row({ label, value }: { label: string; value: string }) {
       </span>
       <span className="shrink-0 text-right text-sm font-semibold text-zinc-50">
         {value}
+        {detail ? (
+          <span className="mt-1 block text-xs font-medium text-cyan-200">
+            {detail}
+          </span>
+        ) : null}
       </span>
     </div>
   );
@@ -200,4 +240,40 @@ function Row({ label, value }: { label: string; value: string }) {
 
 function Empty() {
   return <p className="px-5 py-8 text-sm text-zinc-500">데이터가 없습니다.</p>;
+}
+
+function MoneyValue({
+  totals,
+  exchangeRates,
+}: {
+  totals: Record<string, number>;
+  exchangeRates: Awaited<ReturnType<typeof getExchangeRates>>;
+}) {
+  return (
+    <>
+      <span>{formatTotals(totals).join(" / ")}</span>
+      {hasForeignCurrency(totals) ? (
+        <span className="mt-1 block text-xs font-medium text-cyan-200">
+          예상 {formatMoney(convertTotalsToKrw(totals, exchangeRates), "KRW")}
+        </span>
+      ) : null}
+    </>
+  );
+}
+
+function KrwEstimate({
+  amount,
+  currency,
+  exchangeRates,
+}: {
+  amount: number;
+  currency: string;
+  exchangeRates: Awaited<ReturnType<typeof getExchangeRates>>;
+}) {
+  const estimate = formatKrwEstimate(amount, currency, exchangeRates);
+  return estimate ? (
+    <span className="mt-1 block text-base font-semibold text-cyan-200">
+      {estimate}
+    </span>
+  ) : null;
 }

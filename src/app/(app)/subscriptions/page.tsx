@@ -5,6 +5,7 @@ import { SubscriptionFilters } from "@/components/subscription-filters";
 import { SubscriptionTable } from "@/components/subscription-table";
 import { PageHeader } from "@/components/ui";
 import { getSubscriptions } from "@/lib/dal";
+import { exchangeRateDetail, getExchangeRates } from "@/lib/exchange-rates";
 import { filterAndSortSubscriptions } from "@/lib/subscriptions";
 
 export default async function SubscriptionsPage({
@@ -13,7 +14,10 @@ export default async function SubscriptionsPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const params = await searchParams;
-  const subscriptions = await getSubscriptions();
+  const [subscriptions, exchangeRates] = await Promise.all([
+    getSubscriptions(),
+    getExchangeRates(),
+  ]);
   const filters = {
     query: typeof params.q === "string" ? params.q : "",
     category: typeof params.category === "string" ? params.category : "",
@@ -33,7 +37,7 @@ export default async function SubscriptionsPage({
     <>
       <PageHeader
         title="구독 목록"
-        description="검색, 필터, 정렬로 현재 구독 상태와 결제 예정일을 관리합니다."
+        description={`검색, 필터, 정렬로 현재 구독 상태와 결제 예정일을 관리합니다. ${exchangeRateDetail(exchangeRates)}`}
         action={
           <Link
             href="/subscriptions/new"
@@ -45,7 +49,7 @@ export default async function SubscriptionsPage({
         }
       />
       <SubscriptionFilters categories={categories} filters={filters} />
-      <SubscriptionTable subscriptions={filtered} />
+      <SubscriptionTable subscriptions={filtered} exchangeRates={exchangeRates} />
     </>
   );
 }

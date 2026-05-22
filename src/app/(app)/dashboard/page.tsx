@@ -4,6 +4,13 @@ import Link from "next/link";
 import { Badge, MetricCard, PageHeader } from "@/components/ui";
 import { getSubscriptions } from "@/lib/dal";
 import {
+  convertTotalsToKrw,
+  exchangeRateDetail,
+  formatKrwEstimate,
+  getExchangeRates,
+  hasForeignCurrency,
+} from "@/lib/exchange-rates";
+import {
   categorySummary,
   dueLabel,
   formatMoney,
@@ -13,9 +20,13 @@ import {
 } from "@/lib/subscriptions";
 
 export default async function DashboardPage() {
-  const subscriptions = await getSubscriptions();
+  const [subscriptions, exchangeRates] = await Promise.all([
+    getSubscriptions(),
+    getExchangeRates(),
+  ]);
   const summary = summarizeDashboard(subscriptions);
   const categories = categorySummary(subscriptions).slice(0, 6);
+  const rateDetail = exchangeRateDetail(exchangeRates);
 
   return (
     <>
@@ -36,16 +47,23 @@ export default async function DashboardPage() {
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <MetricCard
           label="이번 달 구독 지출"
-          value={formatTotals(summary.monthlyTotals).map((value) => (
-            <div key={value}>{value}</div>
-          ))}
-          detail="활성, 체험, 해지 예정 포함"
+          value={
+            <MoneyTotal
+              totals={summary.monthlyTotals}
+              exchangeRates={exchangeRates}
+            />
+          }
+          detail={`활성, 체험, 해지 예정 포함 · ${rateDetail}`}
         />
         <MetricCard
           label="연간 예상 지출"
-          value={formatTotals(summary.monthlyTotals, 12).map((value) => (
-            <div key={value}>{value}</div>
-          ))}
+          value={
+            <MoneyTotal
+              totals={summary.monthlyTotals}
+              multiplier={12}
+              exchangeRates={exchangeRates}
+            />
+          }
         />
         <MetricCard label="활성 구독 수" value={`${summary.activeCount}개`} />
         <MetricCard
@@ -82,6 +100,11 @@ export default async function DashboardPage() {
                       {subscription.next_billing_date} ·{" "}
                       {formatMoney(subscription.price, subscription.currency)}
                     </p>
+                    <KrwEstimate
+                      amount={subscription.price}
+                      currency={subscription.currency}
+                      exchangeRates={exchangeRates}
+                    />
                   </div>
                   <Badge tone="amber">
                     {dueLabel(subscription.next_billing_date)}
@@ -113,7 +136,16 @@ export default async function DashboardPage() {
                     {category.category}
                   </span>
                   <span className="text-right text-sm font-semibold text-zinc-50">
-                    {formatTotals(category.totals).join(" / ")}
+                    <span>{formatTotals(category.totals).join(" / ")}</span>
+                    {hasForeignCurrency(category.totals) ? (
+                      <span className="mt-1 block text-xs font-medium text-cyan-200">
+                        예상{" "}
+                        {formatMoney(
+                          convertTotalsToKrw(category.totals, exchangeRates),
+                          "KRW",
+                        )}
+                      </span>
+                    ) : null}
                   </span>
                 </div>
               ))
@@ -139,11 +171,68 @@ export default async function DashboardPage() {
               </span>
               <span className="text-sm font-semibold text-zinc-50">
                 {formatMoney(monthlyAmount(subscription), subscription.currency)}
+                <KrwEstimate
+                  amount={monthlyAmount(subscription)}
+                  currency={subscription.currency}
+                  exchangeRates={exchangeRates}
+                  align="right"
+                />
               </span>
             </div>
           ))}
         </div>
       </section>
     </>
+  );
+}
+
+function MoneyTotal({
+  totals,
+  exchangeRates,
+  multiplier = 1,
+}: {
+  totals: Record<string, number>;
+  exchangeRates: Awaited<ReturnType<typeof getExchangeRates>>;
+  multiplier?: number;
+}) {
+  return (
+    <div>
+      {formatTotals(totals, multiplier).map((value) => (
+        <div key={value}>{value}</div>
+      ))}
+      {hasForeignCurrency(totals) ? (
+        <div className="mt-2 text-base font-semibold text-cyan-200">
+          예상 {formatMoney(convertTotalsToKrw(totals, exchangeRates, multiplier), "KRW")}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function KrwEstimate({
+  amount,
+  currency,
+  exchangeRates,
+  align = "left",
+}: {
+  amount: number | string;
+  currency: string;
+  exchangeRates: Awaited<ReturnType<typeof getExchangeRates>>;
+  align?: "left" | "right";
+}) {
+  const estimate = formatKrwEstimate(Number(amount), currency, exchangeRates);
+
+  if (!estimate) {
+    return null;
+  }
+
+  return (
+    <span
+      className={`mt-1 block text-xs font-medium text-cyan-200 ${
+        align === "right" ? "text-right" : ""
+      }`}
+    >
+      {estimate}
+    </span>
   );
 }
