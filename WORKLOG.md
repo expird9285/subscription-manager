@@ -2,6 +2,17 @@
 
 ## 2026-05-22
 
+### Supabase Split Count Migration Applied
+
+- Checked the live Supabase project `ufypnmmbnzdgyfglpmwa` after adding shared subscription support.
+- Confirmed `public.subscriptions` did not yet have the `split_count` column in the live database.
+- Applied the `add_subscription_split_count` migration through the Supabase plugin.
+- Verified `public.subscriptions.split_count` now exists as `integer not null default 1` with the check constraint `split_count >= 1 and split_count <= 99`.
+
+### Current State
+
+- Local migration files and live Supabase schema are now aligned for equal `1/N` subscription cost splitting.
+
 ### Shared Subscription Cost Splits
 
 - Added `split_count` support for subscriptions so family/friend shared plans can be tracked as `1/N` personal burden while preserving the full billing price.
