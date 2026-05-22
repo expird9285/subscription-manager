@@ -28,6 +28,7 @@ export type Subscription = {
   name: string;
   category: string | null;
   price: number;
+  split_count: number;
   currency: string;
   billing_cycle: BillingCycle;
   next_billing_date: string;

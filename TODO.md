@@ -7,6 +7,7 @@
 - Track the Next.js/PostCSS moderate audit advisory and resolve via a safe Next.js patch or upstream dependency update when available.
 - Decide whether to store exchange-rate snapshots in Supabase for auditability instead of relying on live runtime fetches plus fallback rates.
 - Connect the Vercel project to the Git repository or otherwise add project-level Preview env vars so future preview deploys do not need CLI-passed public Supabase env values.
+- Decide whether shared subscriptions need unequal custom shares later; current support is equal `1/N` only.
 
 ## Verification
 

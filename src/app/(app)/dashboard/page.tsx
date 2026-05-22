@@ -15,7 +15,10 @@ import {
   dueLabel,
   formatMoney,
   formatTotals,
+  hasCostSplit,
   monthlyAmount,
+  sharedPrice,
+  splitLabel,
   summarizeDashboard,
 } from "@/lib/subscriptions";
 
@@ -32,7 +35,7 @@ export default async function DashboardPage() {
     <>
       <PageHeader
         title="대시보드"
-        description="월/연간 지출, 다음 결제일, 결제 임박 항목을 한 화면에서 확인합니다."
+        description="월/연간 내 부담 지출, 다음 결제일, 결제 임박 항목을 한 화면에서 확인합니다."
         action={
           <Link
             href="/subscriptions/new"
@@ -53,7 +56,7 @@ export default async function DashboardPage() {
               exchangeRates={exchangeRates}
             />
           }
-          detail={`활성, 체험, 해지 예정 포함 · ${rateDetail}`}
+          detail={`내 부담 기준 · 활성, 체험, 해지 예정 포함 · ${rateDetail}`}
         />
         <MetricCard
           label="연간 예상 지출"
@@ -100,8 +103,15 @@ export default async function DashboardPage() {
                       {subscription.next_billing_date} ·{" "}
                       {formatMoney(subscription.price, subscription.currency)}
                     </p>
+                    {hasCostSplit(subscription) ? (
+                      <p className="mt-1 text-xs font-medium text-zinc-400">
+                        내 부담{" "}
+                        {formatMoney(sharedPrice(subscription), subscription.currency)} ·{" "}
+                        {splitLabel(subscription)}
+                      </p>
+                    ) : null}
                     <KrwEstimate
-                      amount={subscription.price}
+                      amount={sharedPrice(subscription)}
                       currency={subscription.currency}
                       exchangeRates={exchangeRates}
                     />
@@ -159,7 +169,7 @@ export default async function DashboardPage() {
       </section>
 
       <section className="mt-6 rounded-lg border border-white/10 bg-zinc-900 p-5">
-        <h3 className="text-sm font-semibold text-zinc-50">월 환산 상세</h3>
+        <h3 className="text-sm font-semibold text-zinc-50">월 부담 상세</h3>
         <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
           {summary.liveSubscriptions.slice(0, 9).map((subscription) => (
             <div
@@ -177,6 +187,11 @@ export default async function DashboardPage() {
                   exchangeRates={exchangeRates}
                   align="right"
                 />
+                {hasCostSplit(subscription) ? (
+                  <span className="mt-1 block text-right text-xs font-medium text-zinc-500">
+                    {splitLabel(subscription)}
+                  </span>
+                ) : null}
               </span>
             </div>
           ))}

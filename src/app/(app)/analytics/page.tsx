@@ -54,7 +54,7 @@ export default async function AnalyticsPage() {
     <>
       <PageHeader
         title="분석"
-        description="카테고리, 결제 주기, 고비용 구독, 월별 결제 예정 금액을 확인합니다."
+        description="카테고리, 결제 주기, 고비용 구독, 월별 결제 예정 금액을 내 부담 기준으로 확인합니다."
       />
 
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
@@ -70,7 +70,7 @@ export default async function AnalyticsPage() {
           detail={cancelPending[0]?.name ?? "해지 예정 없음"}
         />
         <MetricCard
-          label="최고 월 환산"
+          label="최고 월 부담"
           value={
             topExpensive[0]
               ? (
@@ -93,7 +93,7 @@ export default async function AnalyticsPage() {
       </section>
 
       <section className="mt-6 grid gap-6 xl:grid-cols-2">
-        <Panel title="카테고리별 월 지출" icon={<PieChart className="h-4 w-4" />}>
+        <Panel title="카테고리별 월 부담" icon={<PieChart className="h-4 w-4" />}>
           {categories.length ? (
             categories.map((item) => (
               <Row
@@ -109,7 +109,7 @@ export default async function AnalyticsPage() {
           )}
         </Panel>
 
-        <Panel title="가장 비싼 구독 TOP 5" icon={<Crown className="h-4 w-4" />}>
+        <Panel title="월 부담 TOP 5" icon={<Crown className="h-4 w-4" />}>
           {topExpensive.length ? (
             topExpensive.map((subscription, index) => (
               <Row
@@ -131,7 +131,7 @@ export default async function AnalyticsPage() {
           )}
         </Panel>
 
-        <Panel title="결제 주기별 월 환산" icon={<BarChart3 className="h-4 w-4" />}>
+        <Panel title="결제 주기별 월 부담" icon={<BarChart3 className="h-4 w-4" />}>
           {cycleTotals.length ? (
             cycleTotals.map(([cycle, totals]) => (
               <Row
@@ -146,7 +146,7 @@ export default async function AnalyticsPage() {
         </Panel>
 
         <Panel
-          title="월별 결제 예정 금액"
+          title="월별 결제 예정 부담"
           icon={<CalendarDays className="h-4 w-4" />}
         >
           {scheduled.map((item) => (

@@ -5,7 +5,7 @@ from datetime import datetime
 
 from bot.commands._guards import ensure_allowed
 from bot.utils.config import Config
-from bot.utils.formatter import list_embed, money
+from bot.utils.formatter import list_embed, money, shared_price
 from bot.utils.supabase_client import SupabaseClient
 
 
@@ -26,12 +26,12 @@ def setup(bot: nextcord.Client, config: Config, supabase: SupabaseClient) -> Non
         totals: dict[str, float] = {}
         for row in rows:
             currency = row.get("currency") or "KRW"
-            totals[currency] = totals.get(currency, 0) + float(row.get("price") or 0)
+            totals[currency] = totals.get(currency, 0) + shared_price(row)
 
         embed = list_embed("이번 달 결제 예정", rows, "이번 달 결제 예정 구독이 없습니다.")
         if totals:
             embed.add_field(
-                name="총액",
+                name="내 부담 총액",
                 value=" / ".join(money(total, currency) for currency, total in totals.items()),
                 inline=False,
             )

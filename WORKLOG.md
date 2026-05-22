@@ -2,6 +2,24 @@
 
 ## 2026-05-22
 
+### Shared Subscription Cost Splits
+
+- Added `split_count` support for subscriptions so family/friend shared plans can be tracked as `1/N` personal burden while preserving the full billing price.
+- Added a Supabase migration to add `subscriptions.split_count` with a default of `1` and a range check from `1` to `99`.
+- Updated the reset migration and TypeScript database type to include `split_count`.
+- Updated subscription create/edit forms to collect the number of people sharing the subscription.
+- Updated dashboard, analytics, filters, and subscription table labels so expense summaries are based on personal burden rather than full plan price.
+- Subscription table now shows full billing amount, personal burden amount, and monthly burden separately.
+- Updated Discord assistant monthly totals and alert/list formatting to use personal burden while showing the full amount for split plans.
+- Ran `npm run lint`: passed.
+- Ran `npm run build` with public Supabase environment variables: passed.
+- Ran `python -m compileall subscription-assistant`: passed.
+
+### Current State
+
+- Cost sharing is implemented for equal `1/N` splits.
+- Existing rows will behave as non-shared subscriptions because the migration defaults `split_count` to `1`.
+
 ### Vercel Preview Deploy
 
 - Committed `subscription-assistant/README.md` setup-guide changes in `c557f3f` (`Document Discord assistant setup`).

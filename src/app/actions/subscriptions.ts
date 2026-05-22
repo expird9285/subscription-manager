@@ -41,6 +41,7 @@ function requireText(value: FormDataEntryValue | null, field: string) {
 function parseSubscriptionForm(formData: FormData) {
   const name = requireText(formData.get("name"), "name");
   const price = Number(formData.get("price"));
+  const splitCount = Number(formData.get("split_count") || 1);
   const billingCycle = String(formData.get("billing_cycle")) as BillingCycle;
   const status = String(formData.get("status") || "active") as SubscriptionStatus;
   const nextBillingDate = requireText(
@@ -50,6 +51,10 @@ function parseSubscriptionForm(formData: FormData) {
 
   if (!Number.isFinite(price) || price < 0) {
     throw new Error("price must be a positive number");
+  }
+
+  if (!Number.isInteger(splitCount) || splitCount < 1 || splitCount > 99) {
+    throw new Error("split_count must be an integer between 1 and 99");
   }
 
   if (!billingCycles.has(billingCycle)) {
@@ -64,6 +69,7 @@ function parseSubscriptionForm(formData: FormData) {
     name,
     category: cleanText(formData.get("category")),
     price,
+    split_count: splitCount,
     currency: (cleanText(formData.get("currency")) ?? "KRW").toUpperCase(),
     billing_cycle: billingCycle,
     next_billing_date: nextBillingDate,

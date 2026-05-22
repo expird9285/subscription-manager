@@ -12,7 +12,10 @@ import {
   billingCycleLabels,
   dueLabel,
   formatMoney,
+  hasCostSplit,
   monthlyAmount,
+  sharedPrice,
+  splitLabel,
   statusLabels,
 } from "@/lib/subscriptions";
 import type { ExchangeRates } from "@/lib/exchange-rates";
@@ -52,13 +55,14 @@ export function SubscriptionTable({
 
   return (
     <div className="overflow-x-auto rounded-lg border border-white/10 bg-zinc-900">
-      <table className="min-w-[1080px] w-full border-collapse text-left text-sm">
+      <table className="min-w-[1180px] w-full border-collapse text-left text-sm">
         <thead className="bg-zinc-950 text-xs uppercase tracking-wide text-zinc-500">
           <tr>
             <th className="px-4 py-3">서비스</th>
             <th className="px-4 py-3">카테고리</th>
-            <th className="px-4 py-3">가격</th>
-            <th className="px-4 py-3">월 환산</th>
+            <th className="px-4 py-3">전체 결제금액</th>
+            <th className="px-4 py-3">내 부담금</th>
+            <th className="px-4 py-3">월 부담</th>
             <th className="px-4 py-3">주기</th>
             <th className="px-4 py-3">다음 결제일</th>
             <th className="px-4 py-3">상태</th>
@@ -85,6 +89,19 @@ export function SubscriptionTable({
                 {formatMoney(subscription.price, subscription.currency)}
                 <KrwEstimate
                   amount={subscription.price}
+                  currency={subscription.currency}
+                  exchangeRates={exchangeRates}
+                />
+                {hasCostSplit(subscription) ? (
+                  <div className="mt-1 text-xs text-zinc-500">
+                    {splitLabel(subscription)}
+                  </div>
+                ) : null}
+              </td>
+              <td className="px-4 py-3 text-zinc-300">
+                {formatMoney(sharedPrice(subscription), subscription.currency)}
+                <KrwEstimate
+                  amount={sharedPrice(subscription)}
                   currency={subscription.currency}
                   exchangeRates={exchangeRates}
                 />

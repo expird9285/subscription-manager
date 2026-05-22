@@ -36,7 +36,7 @@ export function SubscriptionForm({
             />
           </Field>
 
-          <Field label="가격">
+          <Field label="전체 결제금액">
             <input
               className={inputClass}
               name="price"
@@ -44,6 +44,19 @@ export function SubscriptionForm({
               min="0"
               step="0.01"
               defaultValue={subscription?.price ?? ""}
+              required
+            />
+          </Field>
+
+          <Field label="나누는 인원 수">
+            <input
+              className={inputClass}
+              name="split_count"
+              type="number"
+              min="1"
+              max="99"
+              step="1"
+              defaultValue={subscription?.split_count ?? 1}
               required
             />
           </Field>

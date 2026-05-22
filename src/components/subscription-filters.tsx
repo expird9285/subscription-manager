@@ -65,7 +65,7 @@ export function SubscriptionFilters({
       <select className={inputClass} name="sort" defaultValue={filters.sort}>
         <option value="next_billing_asc">결제일 가까운 순</option>
         <option value="price_desc">가격 높은 순</option>
-        <option value="monthly_desc">월 환산 높은 순</option>
+        <option value="monthly_desc">월 부담 높은 순</option>
         <option value="name_asc">이름순</option>
       </select>
 

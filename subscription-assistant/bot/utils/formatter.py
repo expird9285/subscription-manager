@@ -13,8 +13,20 @@ def money(amount: float | int | str, currency: str = "KRW") -> str:
     return f"{currency} {value:,.2f}"
 
 
+def split_count(subscription: dict[str, Any]) -> int:
+    try:
+        count = int(subscription.get("split_count") or 1)
+    except (TypeError, ValueError):
+        return 1
+    return count if count >= 1 else 1
+
+
+def shared_price(subscription: dict[str, Any]) -> float:
+    return float(subscription.get("price") or 0) / split_count(subscription)
+
+
 def monthly_amount(subscription: dict[str, Any]) -> float:
-    price = float(subscription.get("price") or 0)
+    price = shared_price(subscription)
     cycle = subscription.get("billing_cycle")
     if cycle == "yearly":
         return price / 12
@@ -44,11 +56,17 @@ def due_label(value: str, today: date | None = None) -> str:
 
 def subscription_line(subscription: dict[str, Any], today: date | None = None) -> str:
     currency = subscription.get("currency") or "KRW"
-    return (
+    line = (
         f"**{subscription.get('name')}** · "
-        f"{money(subscription.get('price', 0), currency)} · "
+        f"{money(shared_price(subscription), currency)} 내 부담 · "
         f"{subscription.get('next_billing_date')} ({due_label(subscription.get('next_billing_date'), today)})"
     )
+    if split_count(subscription) > 1:
+        line += (
+            f" · 전체 {money(subscription.get('price', 0), currency)}"
+            f" / 1/{split_count(subscription)}"
+        )
+    return line
 
 
 def list_embed(title: str, subscriptions: list[dict[str, Any]], empty: str) -> nextcord.Embed:

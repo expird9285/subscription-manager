@@ -33,8 +33,28 @@ export function toNumber(value: number | string | null | undefined) {
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
-export function monthlyAmount(subscription: Pick<Subscription, "price" | "billing_cycle">) {
-  const price = toNumber(subscription.price);
+export function splitCount(subscription: Pick<Subscription, "split_count">) {
+  const count = Number(subscription.split_count ?? 1);
+  return Number.isInteger(count) && count >= 1 ? count : 1;
+}
+
+export function sharedPrice(subscription: Pick<Subscription, "price" | "split_count">) {
+  return toNumber(subscription.price) / splitCount(subscription);
+}
+
+export function hasCostSplit(subscription: Pick<Subscription, "split_count">) {
+  return splitCount(subscription) > 1;
+}
+
+export function splitLabel(subscription: Pick<Subscription, "split_count">) {
+  const count = splitCount(subscription);
+  return count > 1 ? `1/${count} 부담` : "혼자 부담";
+}
+
+export function monthlyAmount(
+  subscription: Pick<Subscription, "price" | "billing_cycle" | "split_count">,
+) {
+  const price = sharedPrice(subscription);
 
   switch (subscription.billing_cycle) {
     case "monthly":
@@ -234,7 +254,7 @@ export function scheduledMonthlyTotals(subscriptions: Subscription[], months = 6
       .filter((subscription) => subscription.next_billing_date.startsWith(key))
       .reduce<Record<string, number>>((acc, subscription) => {
         const currency = subscription.currency || "KRW";
-        acc[currency] = (acc[currency] ?? 0) + toNumber(subscription.price);
+        acc[currency] = (acc[currency] ?? 0) + sharedPrice(subscription);
         return acc;
       }, {});
 

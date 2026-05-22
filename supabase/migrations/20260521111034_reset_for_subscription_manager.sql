@@ -102,6 +102,7 @@ create table if not exists public.subscriptions (
   name text not null check (length(trim(name)) > 0),
   category text,
   price numeric(12, 2) not null check (price >= 0),
+  split_count integer not null default 1 check (split_count >= 1 and split_count <= 99),
   currency text not null default 'KRW' check (length(trim(currency)) between 3 and 8),
   billing_cycle public.subscription_billing_cycle not null default 'monthly',
   next_billing_date date not null,
