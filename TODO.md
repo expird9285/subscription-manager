@@ -2,6 +2,9 @@
 
 ## Project Hygiene
 
+- Configure Vercel Functions to run closer to Supabase/Korea instead of `iad1`; prefer a supported nearby Asia region such as `hnd1` if Seoul is unavailable.
+- Reduce duplicate Supabase Auth calls between `proxy` and the server data layer.
+- Move exchange-rate fetching off the blocking page-render path or add a short timeout/local cache fallback.
 - Create `.env.local` from `.env.example` for local development and builds.
 - Decide whether to keep `next/font/google` or switch to a self-hosted/local font setup for network-restricted builds.
 - Track the Next.js/PostCSS moderate audit advisory and resolve via a safe Next.js patch or upstream dependency update when available.

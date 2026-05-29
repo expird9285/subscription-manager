@@ -1,5 +1,22 @@
 # Worklog
 
+## 2026-05-29
+
+### Performance Diagnosis
+
+- Investigated slow response reports after several days of real usage.
+- Confirmed the production deployment behind `manager.ocsar.xyz` is running Vercel Functions in `iad1`.
+- Confirmed the Supabase project `ufypnmmbnzdgyfglpmwa` is in `ap-northeast-2`.
+- Identified the likely primary latency source: authenticated page requests run server-side in Vercel `iad1` while Supabase Auth and Postgres are in Seoul, causing long-distance network round trips.
+- Identified duplicated auth work: the Next.js `proxy` calls `supabase.auth.getUser()` and the app layout/data layer calls `getCurrentUser()` with `supabase.auth.getUser()` again during the same page request.
+- Identified another avoidable latency source: dashboard, analytics, and subscription pages await `getExchangeRates()`, which calls an external exchange-rate API on the server render path.
+- Confirmed the production deployment inspection shows server function output in `iad1`.
+
+### Current State
+
+- No runtime code changes were made during this diagnosis.
+- Recommended next fixes are to move Vercel Functions closer to Supabase/Korea, reduce duplicate Supabase Auth checks, and make exchange-rate loading non-blocking or locally cached.
+
 ## 2026-05-22
 
 ### Supabase Split Count Migration Applied
