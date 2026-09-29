@@ -1,0 +1,64 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "subscription-manager",
+  "main": "src/index.tsx",
+  "compatibility_date": "2026-09-24",
+  "compatibility_flags": ["nodejs_compat"],
+  "minify": true,
+  "upload_source_maps": true,
+  "observability": {
+    "enabled": true
+  },
+
+  // Tailwind CSS is compiled into public/assets/app.css before `wrangler dev` and `wrangler deploy`.
+  "build": {
+    "command": "npm run build:css",
+    "watch_dir": "src"
+  },
+
+  // Static files (CSS, JS, favicon) are served directly from here before the Worker runs.
+  "assets": {
+    "directory": "./public"
+  },
+
+  // `manager.ocsar.xyz` must not have an existing DNS record (e.g. the old Vercel CNAME) when deploying.
+  "routes": [
+    {
+      "pattern": "manager.ocsar.xyz",
+      "custom_domain": true
+    }
+  ],
+
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "subscription-manager",
+      "database_id": "930e5831-9a7d-48fa-83fc-2915a6519987",
+      "migrations_dir": "migrations"
+    }
+  ],
+
+  // Hourly: billing alerts (sent once per day after ALERT_HOUR), exchange-rate refresh, session cleanup.
+  "triggers": {
+    "crons": ["0 * * * *"]
+  },
+
+  "vars": {
+    "TIMEZONE": "Asia/Seoul",
+    "ALERT_HOUR": "9",
+    // Optional Discord server ID. Leave empty to register slash commands globally.
+    "DISCORD_GUILD_ID": ""
+  },
+
+  // Set each with `npx wrangler secret put <NAME>`. Deploy fails if any is missing.
+  "secrets": {
+    "required": [
+      "DISCORD_CLIENT_ID",
+      "DISCORD_CLIENT_SECRET",
+      "DISCORD_PUBLIC_KEY",
+      "DISCORD_BOT_TOKEN",
+      "DISCORD_ALERT_CHANNEL_ID",
+      "ALLOWED_DISCORD_IDS"
+    ]
+  }
+}

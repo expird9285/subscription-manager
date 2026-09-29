@@ -1,5 +1,26 @@
 # Worklog
 
+## 2026-09-29
+
+### Cloudflare Workers Rewrite
+
+- Rewrote the app as a single Cloudflare Worker per the owner's decisions: Hono + JSX SSR, Cloudflare D1 with first-party Discord OAuth, Discord bot moved into the Worker (HTTP interactions + Cron Trigger), custom domain `manager.ocsar.xyz`.
+- Removed the Next.js app, Supabase client/migrations, Vercel config and the Python `subscription-assistant/` bot.
+- Created the D1 database `subscription-manager` (APAC, id `930e5831-9a7d-48fa-83fc-2915a6519987`) through the connected Cloudflare account; tables are created by `migrations/0001_initial_schema.sql` on deploy.
+- Ported every page (dashboard, subscriptions list/new/edit, analytics, settings, login) and kept the dark Tailwind design, mobile menu and collapsible desktop sidebar (state now persisted in a cookie).
+- Behaviour changes: dates are computed in `TIMEZONE` (Asia/Seoul) instead of the server's UTC clock; form validation errors re-render the form instead of throwing; delete asks for confirmation; access is fail-closed on `ALLOWED_DISCORD_IDS`; bot commands show the caller's own subscriptions; settings page can register slash commands, send a test alert and export JSON.
+- Exchange rates now come from a D1 snapshot refreshed hourly by cron (EUR-based Frankfurter rates for better KRW precision), so page renders never wait on the external API.
+- Fixed the login background gradient, which Tailwind 4 compiled to an invalid `background-color` in the old app too.
+- Added `scripts/export-supabase.mjs` to move users, subscriptions and notification logs from Supabase into D1 (idempotent, matches users by Discord ID). Verified against a fake Supabase server and a local D1 twice.
+- Ran `npm run check`: TypeScript passed, 39 Vitest tests passed (auth/OAuth, CSRF, CRUD, per-user isolation, interactions signatures and commands, alert scheduling/dedupe/retry, cron handler).
+- Ran `npx wrangler deploy --dry-run`: bundle built with D1, vars and assets bindings.
+- Ran `wrangler dev` with seeded local data, checked every route, triggered the cron handler (reached the Discord API) and captured desktop/mobile screenshots with Playwright.
+- npm 10.9 hits an arborist `edgesOut` bug when resolving vitest peers from scratch; the lockfile was generated with npm 11 and installs fine with `npm ci` / `npm install` on npm 10.
+
+### Current State
+
+- Code is ready to deploy; the owner still needs to set secrets, remove the Vercel CNAME, deploy, configure the Discord portal and run the Supabase export (see `TODO.md`).
+
 ## 2026-05-29
 
 ### Performance Diagnosis

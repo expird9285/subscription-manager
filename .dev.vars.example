@@ -1,0 +1,8 @@
+# Local development secrets for `npm run dev` (copy to .dev.vars; never commit .dev.vars).
+# Register http://localhost:8787/auth/callback as a Discord OAuth2 redirect to log in locally.
+DISCORD_CLIENT_ID=
+DISCORD_CLIENT_SECRET=
+DISCORD_PUBLIC_KEY=
+DISCORD_BOT_TOKEN=
+DISCORD_ALERT_CHANNEL_ID=
+ALLOWED_DISCORD_IDS=
