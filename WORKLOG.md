@@ -2,6 +2,15 @@
 
 ## 2026-10-01
 
+### Payment Cards, Linked Accounts And Split-Plan Collection
+
+- Added `migrations/0002_payment_methods.sql`: `bank_accounts`, `payment_cards` (linked account, ON DELETE SET NULL), and `subscriptions.payment_card_id`, `collection_account_id`, `share_token`.
+- New `/payments` page: accounts with their cards, next-30-day charges per account (full amounts, weekly/monthly/quarterly/yearly occurrences rolled forward), money to collect from split plans, and subscriptions without a card. Dashboard shows a per-account 30-day panel.
+- Subscription form has "결제 카드" and "수금 계좌" selects; ownership of selected cards/accounts is checked server-side. The old free-text payment field stays as "기타 결제 수단 메모".
+- Billing alerts now read `N일 뒤에(오늘) **이름** 구독이 결제돼요. **카드**에 연결된 계좌(은행 별칭)에 **금액** 이상 채워져 있는지 확인해 주세요.` with the full amount (foreign currencies add a KRW estimate).
+- Split plans get a "수금 안내" page with copyable text and a revocable public link `/s/:token` (no-store, noindex, shows only name, per-person amount, dates and the collection account).
+- Ran `npm run check`: TypeScript passed, 47 Vitest tests passed. Checked `/payments`, forms, share and public pages in `wrangler dev` with Playwright (desktop/mobile, clipboard copy, no horizontal overflow after a grid `min-width` fix).
+
 ### Remote D1 Schema And Workers Builds Notes
 
 - Merged PR #1 into `main` at the owner's request.

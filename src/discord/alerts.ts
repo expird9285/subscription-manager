@@ -2,11 +2,12 @@ import { claimNotification, releaseNotification } from "../db/notifications";
 import { setState } from "../db/state";
 import { listAlertCandidates } from "../db/subscriptions";
 import { alertHourOf, discordConfig, isAllowedDiscordId, timeZoneOf } from "../lib/config";
-import { addDays, daysBetween, dueLabel, formatDateTime, hourIn, todayIn } from "../lib/dates";
+import { addDays, daysBetween, formatDateTime, hourIn, todayIn } from "../lib/dates";
+import { getExchangeRates } from "../lib/exchange-rates";
 import { alertStatuses } from "../lib/subscriptions";
 import type { NotificationType } from "../lib/types";
 import { sendAlertMessage } from "./api";
-import { subscriptionLine } from "./format";
+import { billingAlertMessage } from "./format";
 
 export const LAST_ALERT_KEY = "last_alert_at";
 
@@ -37,7 +38,10 @@ export async function runBillingAlerts(env: Env, now = new Date()): Promise<Aler
   }
 
   const today = todayIn(timeZone, now);
-  const candidates = await listAlertCandidates(env.DB, today, addDays(today, 7), alertStatuses);
+  const [candidates, rates] = await Promise.all([
+    listAlertCandidates(env.DB, today, addDays(today, 7), alertStatuses),
+    getExchangeRates(env.DB),
+  ]);
   let sent = 0;
   let failed = 0;
 
@@ -57,9 +61,7 @@ export async function runBillingAlerts(env: Env, now = new Date()): Promise<Aler
     }
 
     try {
-      await sendAlertMessage(env, {
-        content: `[${dueLabel(targetDate, today)}] ${subscriptionLine(subscription, today)}`,
-      });
+      await sendAlertMessage(env, { content: billingAlertMessage(subscription, today, rates) });
       sent += 1;
     } catch (error) {
       failed += 1;

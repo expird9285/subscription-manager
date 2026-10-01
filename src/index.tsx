@@ -4,16 +4,20 @@ import { csrf } from "hono/csrf";
 import { secureHeaders } from "hono/secure-headers";
 
 import { requireUser } from "./auth/session";
+import { listPaymentMethods } from "./db/payment-methods";
 import { deleteExpiredSessions } from "./db/sessions";
 import { listSubscriptions } from "./db/subscriptions";
 import { runBillingAlerts } from "./discord/alerts";
 import { handleInteraction } from "./discord/interactions";
 import { timeZoneOf } from "./lib/config";
-import { todayIn } from "./lib/dates";
+import { addDays, todayIn } from "./lib/dates";
 import { getExchangeRates, refreshExchangeRatesIfStale } from "./lib/exchange-rates";
+import { summarizeOutflow } from "./lib/payments";
 import type { AppEnv } from "./lib/types";
 import { authRoutes, loginRoutes } from "./routes/auth";
+import { OUTFLOW_WINDOW_DAYS, paymentRoutes } from "./routes/payments";
 import { settingsRoutes } from "./routes/settings";
+import { shareRoutes } from "./routes/share";
 import { subscriptionRoutes } from "./routes/subscriptions";
 import { AnalyticsPage } from "./views/pages/analytics";
 import { DashboardPage } from "./views/pages/dashboard";
@@ -48,17 +52,29 @@ app.get("/", (c) => c.redirect("/dashboard"));
 app.route("/login", loginRoutes);
 app.route("/auth", authRoutes);
 app.route("/subscriptions", subscriptionRoutes);
+app.route("/payments", paymentRoutes);
 app.route("/settings", settingsRoutes);
+app.route("/s", shareRoutes);
 
 app.get("/dashboard", requireUser, async (c) => {
-  const [subscriptions, rates] = await Promise.all([
-    listSubscriptions(c.env.DB, c.get("user").id),
+  const userId = c.get("user").id;
+  const today = todayIn(timeZoneOf(c.env));
+  const [subscriptions, rates, { accounts, cards }] = await Promise.all([
+    listSubscriptions(c.env.DB, userId),
     getExchangeRates(c.env.DB, (promise) => c.executionCtx.waitUntil(promise)),
+    listPaymentMethods(c.env.DB, userId),
   ]);
+  const outflow = summarizeOutflow({
+    subscriptions,
+    accounts,
+    cards,
+    from: today,
+    to: addDays(today, OUTFLOW_WINDOW_DAYS),
+  });
   return renderApp(
     c,
     "대시보드",
-    <DashboardPage subscriptions={subscriptions} rates={rates} today={todayIn(timeZoneOf(c.env))} />,
+    <DashboardPage subscriptions={subscriptions} rates={rates} today={today} outflow={outflow} />,
   );
 });
 

@@ -13,6 +13,7 @@ import {
   PanelLeftOpen,
   Plus,
   Settings,
+  Wallet,
   X,
 } from "./icons";
 
@@ -20,6 +21,7 @@ const navigation = [
   { href: "/dashboard", label: "대시보드", icon: LayoutDashboard },
   { href: "/subscriptions", label: "구독 목록", icon: CreditCard },
   { href: "/subscriptions/new", label: "구독 추가", icon: Plus },
+  { href: "/payments", label: "결제수단", icon: Wallet },
   { href: "/analytics", label: "분석", icon: ChartColumn },
   { href: "/settings", label: "설정", icon: Settings },
 ];
@@ -32,7 +34,11 @@ function activeHref(pathname: string) {
     .sort((a, b) => b.length - a.length)[0];
 }
 
-export function Document({ title, children }: PropsWithChildren<{ title?: string }>) {
+export function Document({
+  title,
+  noindex = false,
+  children,
+}: PropsWithChildren<{ title?: string; noindex?: boolean }>) {
   return (
     <html lang="ko" class="h-full antialiased">
       <head>
@@ -40,6 +46,7 @@ export function Document({ title, children }: PropsWithChildren<{ title?: string
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <meta name="color-scheme" content="dark" />
         <meta name="description" content="Personal subscription spending dashboard" />
+        {noindex ? <meta name="robots" content="noindex, nofollow" /> : null}
         <title>{title ? `${title} · Subscription Manager` : "Subscription Manager"}</title>
         <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />

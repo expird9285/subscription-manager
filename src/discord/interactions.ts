@@ -1,5 +1,6 @@
 import type { Context } from "hono";
 
+import { listPaymentCards } from "../db/payment-methods";
 import { getState } from "../db/state";
 import {
   listUserSubscriptionsBetween,
@@ -47,25 +48,36 @@ function replyText(content: string) {
   return reply({ content });
 }
 
+async function cardNamesOf(env: Env, userId: string) {
+  const cards = await listPaymentCards(env.DB, userId);
+  return new Map(cards.map((card) => [card.id, card.name]));
+}
+
 async function upcoming({ env, user, today }: CommandContext) {
-  const rows = await listUserSubscriptionsBetween(env.DB, user.id, today, addDays(today, 7), alertStatuses, {
-    autoRenewOnly: true,
+  const [rows, cardNames] = await Promise.all([
+    listUserSubscriptionsBetween(env.DB, user.id, today, addDays(today, 7), alertStatuses, {
+      autoRenewOnly: true,
+    }),
+    cardNamesOf(env, user.id),
+  ]);
+  return reply({
+    embeds: [listEmbed("7일 내 결제 예정", rows, "7일 내 결제 예정 구독이 없습니다.", today, cardNames)],
   });
-  return reply({ embeds: [listEmbed("7일 내 결제 예정", rows, "7일 내 결제 예정 구독이 없습니다.", today)] });
 }
 
 async function thisMonth({ env, user, today, waitUntil }: CommandContext) {
   const { start, end } = monthRange(today);
-  const [rows, rates] = await Promise.all([
+  const [rows, rates, cardNames] = await Promise.all([
     listUserSubscriptionsBetween(env.DB, user.id, start, end, liveStatuses),
     getExchangeRates(env.DB, waitUntil),
+    cardNamesOf(env, user.id),
   ]);
   const totals: Record<string, number> = {};
   for (const row of rows) {
     totals[row.currency] = (totals[row.currency] ?? 0) + sharedPrice(row);
   }
 
-  const embed = listEmbed("이번 달 결제 예정", rows, "이번 달 결제 예정 구독이 없습니다.", today);
+  const embed = listEmbed("이번 달 결제 예정", rows, "이번 달 결제 예정 구독이 없습니다.", today, cardNames);
   if (rows.length) {
     const fields = [
       {
@@ -89,8 +101,11 @@ async function thisMonth({ env, user, today, waitUntil }: CommandContext) {
 }
 
 async function activeList({ env, user, today }: CommandContext) {
-  const rows = await listUserSubscriptionsByStatus(env.DB, user.id, alertStatuses);
-  return reply({ embeds: [listEmbed("활성 구독 목록", rows, "활성 구독이 없습니다.", today)] });
+  const [rows, cardNames] = await Promise.all([
+    listUserSubscriptionsByStatus(env.DB, user.id, alertStatuses),
+    cardNamesOf(env, user.id),
+  ]);
+  return reply({ embeds: [listEmbed("활성 구독 목록", rows, "활성 구독이 없습니다.", today, cardNames)] });
 }
 
 async function status({ env, colo }: CommandContext) {

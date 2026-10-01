@@ -1,5 +1,5 @@
-// Progressive enhancement for the server-rendered pages: navigation toggles and
-// confirmation prompts. Everything else works with plain HTML forms and links.
+// Progressive enhancement for the server-rendered pages: navigation toggles, copy buttons
+// and confirmation prompts. Everything else works with plain HTML forms and links.
 (() => {
   const shell = document.querySelector("[data-shell]");
 
@@ -23,8 +23,41 @@
     panel.inert = !open;
   }
 
+  async function copyText(text, source) {
+    try {
+      await navigator.clipboard.writeText(text);
+      return true;
+    } catch {
+      // Fallback for browsers without async clipboard access.
+      if (source instanceof HTMLInputElement || source instanceof HTMLTextAreaElement) {
+        source.select();
+        return document.execCommand("copy");
+      }
+      return false;
+    }
+  }
+
+  async function handleCopy(button) {
+    const source = button.dataset.copy ? document.querySelector(button.dataset.copy) : null;
+    const text =
+      button.dataset.copyText ??
+      (source instanceof HTMLInputElement || source instanceof HTMLTextAreaElement
+        ? source.value
+        : source?.textContent ?? "");
+    if (!text || !(await copyText(text, source))) return;
+    button.dataset.copied = "true";
+    window.setTimeout(() => {
+      delete button.dataset.copied;
+    }, 1500);
+  }
+
   document.addEventListener("click", (event) => {
     const target = event.target instanceof Element ? event.target : null;
+    const copyButton = target?.closest("[data-copy], [data-copy-text]");
+    if (copyButton) {
+      handleCopy(copyButton);
+      return;
+    }
     const sidebarButton = target?.closest("[data-sidebar-toggle]");
     if (sidebarButton) {
       toggleSidebar(sidebarButton);

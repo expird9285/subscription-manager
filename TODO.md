@@ -13,10 +13,12 @@
 
 ## Follow-ups
 
+- The Discord "애플리케이션이 응답하지 않았습니다" report is still open: confirm the Interactions Endpoint URL is saved in the Developer Portal and check Worker logs for `POST /discord/interactions`.
+- Consider per-member payment tracking for split plans (explicitly out of scope for now).
 - Consider auto-advancing `next_billing_date` by billing cycle once a bill date passes (today it stays in the past as `D+N`, same as before).
 - Decide whether shared subscriptions need unequal custom shares later; current support is equal `1/N` only.
 - Decide whether to self-host the Geist font instead of loading it from Google Fonts.
-- Optionally connect Workers Builds (Git integration) with `npm run deploy` as the deploy command.
+- New migrations must be applied to remote D1 separately (`npm run db:migrate:remote`); the Workers Builds token has no D1 permission.
 
 ## Verification
 

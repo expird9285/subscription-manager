@@ -1,5 +1,6 @@
+import { accountLabel, cardLabel } from "../../lib/payments";
 import { billingCycleLabels, statusLabels } from "../../lib/subscriptions";
-import type { Subscription } from "../../lib/types";
+import type { BankAccount, PaymentCard, Subscription } from "../../lib/types";
 import type { FormValues } from "../../lib/validation";
 import { Button, Field, inputClass, LinkButton, Notice, PageHeader, textareaClass } from "../ui";
 
@@ -13,11 +14,15 @@ export function subscriptionToValues(subscription: Subscription): FormValues {
     billing_cycle: subscription.billing_cycle,
     next_billing_date: subscription.next_billing_date,
     payment_method: subscription.payment_method ?? "",
+    payment_card_id: subscription.payment_card_id ?? "",
+    collection_account_id: subscription.collection_account_id ?? "",
     status: subscription.status,
     auto_renew: subscription.auto_renew ? "on" : "",
     memo: subscription.memo ?? "",
   };
 }
+
+export type PaymentOptions = { accounts: BankAccount[]; cards: PaymentCard[] };
 
 export const emptyFormValues: FormValues = {
   split_count: "1",
@@ -32,11 +37,13 @@ function SubscriptionForm({
   values,
   errors,
   submitLabel,
+  options,
 }: {
   action: string;
   values: FormValues;
   errors: string[];
   submitLabel: string;
+  options: PaymentOptions;
 }) {
   const value = (key: string) => values[key] ?? "";
 
@@ -128,13 +135,35 @@ function SubscriptionForm({
             />
           </Field>
 
-          <Field label="결제 수단">
+          <Field label="결제 카드">
+            <select class={inputClass} name="payment_card_id">
+              <option value="">선택 안 함</option>
+              {options.cards.map((card) => (
+                <option value={card.id} selected={value("payment_card_id") === card.id}>
+                  {cardLabel(card)}
+                </option>
+              ))}
+            </select>
+          </Field>
+
+          <Field label="수금 계좌 (1/N일 때)">
+            <select class={inputClass} name="collection_account_id">
+              <option value="">선택 안 함</option>
+              {options.accounts.map((account) => (
+                <option value={account.id} selected={value("collection_account_id") === account.id}>
+                  {accountLabel(account)}
+                </option>
+              ))}
+            </select>
+          </Field>
+
+          <Field label="기타 결제 수단 메모">
             <input
               class={inputClass}
               name="payment_method"
               value={value("payment_method")}
               maxlength={200}
-              placeholder="예: 현대카드, PayPal"
+              placeholder="카드 미등록 시: 예) PayPal, 통신사 결제"
             />
           </Field>
 
@@ -148,6 +177,16 @@ function SubscriptionForm({
             </select>
           </Field>
         </div>
+
+        {options.cards.length || options.accounts.length ? null : (
+          <p class="text-sm text-zinc-500">
+            결제 카드와 수금 계좌는{" "}
+            <a href="/payments" class="font-semibold text-cyan-300 hover:text-cyan-200">
+              결제수단
+            </a>
+            에서 먼저 등록하세요.
+          </p>
+        )}
 
         <label class="flex items-center gap-3 text-sm font-medium text-zinc-300">
           <input
@@ -176,7 +215,15 @@ function SubscriptionForm({
   );
 }
 
-export function NewSubscriptionPage({ values, errors = [] }: { values: FormValues; errors?: string[] }) {
+export function NewSubscriptionPage({
+  values,
+  options,
+  errors = [],
+}: {
+  values: FormValues;
+  options: PaymentOptions;
+  errors?: string[];
+}) {
   return (
     <>
       <PageHeader
@@ -188,7 +235,7 @@ export function NewSubscriptionPage({ values, errors = [] }: { values: FormValue
           </LinkButton>
         }
       />
-      <SubscriptionForm action="/subscriptions" values={values} errors={errors} submitLabel="추가" />
+      <SubscriptionForm action="/subscriptions" values={values} errors={errors} submitLabel="추가" options={options} />
     </>
   );
 }
@@ -197,11 +244,13 @@ export function EditSubscriptionPage({
   id,
   name,
   values,
+  options,
   errors = [],
 }: {
   id: string;
   name: string;
   values: FormValues;
+  options: PaymentOptions;
   errors?: string[];
 }) {
   return (
@@ -215,7 +264,13 @@ export function EditSubscriptionPage({
           </LinkButton>
         }
       />
-      <SubscriptionForm action={`/subscriptions/${id}`} values={values} errors={errors} submitLabel="저장" />
+      <SubscriptionForm
+        action={`/subscriptions/${id}`}
+        values={values}
+        errors={errors}
+        submitLabel="저장"
+        options={options}
+      />
     </>
   );
 }

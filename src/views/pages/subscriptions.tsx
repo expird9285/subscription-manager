@@ -12,8 +12,9 @@ import {
   UNCATEGORIZED,
   type SubscriptionFilters,
 } from "../../lib/subscriptions";
-import type { Subscription } from "../../lib/types";
-import { Icon, Pencil, Plus, Search, Trash } from "../icons";
+import { cardLabel } from "../../lib/payments";
+import type { PaymentCard, Subscription } from "../../lib/types";
+import { Icon, Link, Pencil, Plus, Search, Trash } from "../icons";
 import {
   Badge,
   Button,
@@ -104,11 +105,13 @@ function SubscriptionRow({
   rates,
   today,
   returnTo,
+  card,
 }: {
   subscription: Subscription;
   rates: ExchangeRates;
   today: string;
   returnTo: string;
+  card?: PaymentCard;
 }) {
   const base = `/subscriptions/${subscription.id}`;
 
@@ -168,9 +171,21 @@ function SubscriptionRow({
           </Button>
         </form>
       </td>
-      <td class="px-4 py-3 text-zinc-400">{subscription.payment_method || "-"}</td>
+      <td class="px-4 py-3 text-zinc-400">
+        {card ? <span class="text-zinc-200">{cardLabel(card)}</span> : subscription.payment_method || "-"}
+      </td>
       <td class="px-4 py-3">
         <div class="flex justify-end gap-2">
+          {hasCostSplit(subscription) ? (
+            <a
+              href={`${base}/share`}
+              class="inline-flex h-9 w-9 items-center justify-center rounded-md border border-cyan-400/30 text-cyan-200 transition hover:bg-cyan-500/10"
+              title="수금 안내"
+              aria-label={`${subscription.name} 수금 안내`}
+            >
+              <Icon icon={Link} />
+            </a>
+          ) : null}
           <a
             href={`${base}/edit`}
             class="inline-flex h-9 w-9 items-center justify-center rounded-md border border-white/10 text-zinc-300 transition hover:bg-zinc-950"
@@ -208,6 +223,7 @@ export function SubscriptionsPage({
   today,
   returnTo,
   notice,
+  cards,
 }: {
   subscriptions: Subscription[];
   categories: string[];
@@ -216,8 +232,10 @@ export function SubscriptionsPage({
   today: string;
   returnTo: string;
   notice?: string;
+  cards: PaymentCard[];
 }) {
   const message = notice ? notices[notice] : undefined;
+  const cardById = new Map(cards.map((card) => [card.id, card]));
 
   return (
     <>
@@ -248,13 +266,19 @@ export function SubscriptionsPage({
                 <th class="px-4 py-3">다음 결제일</th>
                 <th class="px-4 py-3">상태</th>
                 <th class="px-4 py-3">자동 갱신</th>
-                <th class="px-4 py-3">결제 수단</th>
+                <th class="px-4 py-3">결제 카드</th>
                 <th class="px-4 py-3 text-right">작업</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-white/10">
               {subscriptions.map((subscription) => (
-                <SubscriptionRow subscription={subscription} rates={rates} today={today} returnTo={returnTo} />
+                <SubscriptionRow
+                  subscription={subscription}
+                  rates={rates}
+                  today={today}
+                  returnTo={returnTo}
+                  card={subscription.payment_card_id ? cardById.get(subscription.payment_card_id) : undefined}
+                />
               ))}
             </tbody>
           </table>

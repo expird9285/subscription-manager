@@ -9,18 +9,69 @@ import {
   splitLabel,
   summarizeDashboard,
 } from "../../lib/subscriptions";
+import { accountLabel, type summarizeOutflow } from "../../lib/payments";
 import type { Subscription } from "../../lib/types";
-import { CalendarClock, Icon, Plus } from "../icons";
+import { CalendarClock, Icon, Plus, Wallet } from "../icons";
 import { Badge, Empty, KrwEstimate, LinkButton, MetricCard, MoneyTotals, PageHeader } from "../ui";
+
+function OutflowPanel({
+  outflow,
+  rates,
+}: {
+  outflow: ReturnType<typeof summarizeOutflow>;
+  rates: ExchangeRates;
+}) {
+  const rows = outflow.accountGroups.filter((group) => group.charges.length);
+  const hasUnassigned = outflow.unassigned.length > 0;
+
+  return (
+    <section class="mt-6 rounded-lg border border-white/10 bg-zinc-900">
+      <div class="flex items-center justify-between border-b border-white/10 px-5 py-4">
+        <h3 class="text-sm font-semibold text-zinc-50">계좌별 30일 출금 예정</h3>
+        <a href="/payments" class="inline-flex items-center gap-1 text-sm font-medium text-cyan-300 hover:text-cyan-200">
+          <Icon icon={Wallet} />
+          결제수단 관리
+        </a>
+      </div>
+      <div class="divide-y divide-white/10">
+        {rows.map((group) => (
+          <div class="flex items-center justify-between gap-4 px-5 py-4">
+            <span class="min-w-0 truncate text-sm font-medium text-zinc-300">
+              {group.account ? accountLabel(group.account) : "연결 계좌 없는 카드"}
+              <span class="ml-2 text-xs text-zinc-500">{group.charges.length}건</span>
+            </span>
+            <span class="shrink-0 text-right text-sm font-semibold text-zinc-50">
+              <MoneyTotals totals={group.totals} rates={rates} />
+            </span>
+          </div>
+        ))}
+        {hasUnassigned ? (
+          <div class="flex items-center justify-between gap-4 px-5 py-4">
+            <span class="min-w-0 truncate text-sm font-medium text-zinc-400">
+              결제 카드 미지정
+              <span class="ml-2 text-xs text-zinc-500">{outflow.unassigned.length}건</span>
+            </span>
+            <span class="shrink-0 text-right text-sm font-semibold text-zinc-300">
+              <MoneyTotals totals={outflow.unassignedTotals} rates={rates} />
+            </span>
+          </div>
+        ) : null}
+        {rows.length || hasUnassigned ? null : <Empty message="30일 안에 빠져나갈 구독이 없습니다." />}
+      </div>
+    </section>
+  );
+}
 
 export function DashboardPage({
   subscriptions,
   rates,
   today,
+  outflow,
 }: {
   subscriptions: Subscription[];
   rates: ExchangeRates;
   today: string;
+  outflow: ReturnType<typeof summarizeOutflow>;
 }) {
   const summary = summarizeDashboard(subscriptions, today);
   const categories = categorySummary(subscriptions).slice(0, 6);
@@ -114,6 +165,8 @@ export function DashboardPage({
           </div>
         </div>
       </section>
+
+      <OutflowPanel outflow={outflow} rates={rates} />
 
       <section class="mt-6 rounded-lg border border-white/10 bg-zinc-900 p-5">
         <h3 class="text-sm font-semibold text-zinc-50">월 부담 상세</h3>

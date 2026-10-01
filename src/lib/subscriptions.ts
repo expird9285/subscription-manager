@@ -105,6 +105,16 @@ export function formatMoney(amount: number, currency = "KRW") {
   return formatter.format(amount);
 }
 
+/** Korean-style KRW amount for messages, e.g. `17,000원`. */
+export function formatWon(amount: number) {
+  return `${Math.round(amount).toLocaleString("ko-KR")}원`;
+}
+
+/** `17,000원` for KRW, the regular currency format otherwise. */
+export function formatAmount(amount: number, currency: string) {
+  return normalizeCurrency(currency) === "KRW" ? formatWon(amount) : formatMoney(amount, currency);
+}
+
 export function formatTotals(totals: Totals, multiplier = 1) {
   const entries = Object.entries(totals);
 
