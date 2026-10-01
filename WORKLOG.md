@@ -1,5 +1,14 @@
 # Worklog
 
+## 2026-10-01
+
+### Remote D1 Schema And Workers Builds Notes
+
+- Merged PR #1 into `main` at the owner's request.
+- Applied `migrations/0001_initial_schema.sql` to the remote D1 database through the connected Cloudflare account and recorded it in `d1_migrations` (same table wrangler uses), so `wrangler d1 migrations apply DB --remote` will not re-run it.
+- Verified the remote tables (`users`, `sessions`, `subscriptions`, `notification_logs`, `app_state`) and indexes exist.
+- Documented Workers Builds settings: build command `npm run build:css`, deploy command `npx wrangler deploy` (the auto-generated build token has no D1 permission), and the expected first-build failure until secrets are set.
+
 ## 2026-09-29
 
 ### Cloudflare Workers Rewrite

@@ -76,6 +76,7 @@ npm run deploy
 ```
 
 원격 D1에 마이그레이션을 적용하고(`migrations/`), Tailwind CSS를 빌드한 뒤 Worker를 배포합니다. 이후 코드를 바꿨을 때도 같은 명령어를 쓰면 됩니다.
+GitHub 연동으로 배포하는 경우에는 아래 [자동 배포](#자동-배포-선택) 설정을 따르세요.
 
 > 배포하면 결제 알림 크론이 바로 돌기 시작합니다. 알림이 두 번 가지 않도록 **기존 서버의 Python 봇(systemd)과 `check_billing.py` cron을 먼저 중지**하세요.
 
@@ -112,8 +113,16 @@ rm supabase-export.sql
 
 ## 자동 배포 (선택)
 
-Cloudflare 대시보드 → Workers & Pages → `subscription-manager` → **Settings → Builds**에서 GitHub 저장소를 연결하면 push할 때마다 배포됩니다.
-Deploy command를 `npm run deploy`로 지정하면 마이그레이션도 함께 적용됩니다.
+Cloudflare 대시보드 → Workers & Pages에서 GitHub 저장소를 연결하면 `main`에 push할 때마다 배포됩니다.
+
+| 항목 | 값 |
+| --- | --- |
+| 빌드 명령 | `npm run build:css` (Git 연동 빌드는 `wrangler.jsonc`의 `build.command`를 실행하지 않습니다) |
+| 배포 명령 | `npx wrangler deploy` |
+
+- 자동 생성되는 빌드용 API 토큰에는 D1 권한이 없으므로 배포 명령에 `npm run deploy`(마이그레이션 포함)를 쓰면 실패합니다.
+  새 마이그레이션을 추가했을 때는 로컬에서 `npm run db:migrate:remote`를 실행하세요. (`0001_initial_schema.sql`은 이미 적용되어 있습니다.)
+- 시크릿을 등록하기 전의 첫 빌드는 `Missing required secrets`로 실패합니다. Worker → **설정 → 변수 및 비밀**에서 시크릿 6개를 "비밀" 유형으로 추가한 뒤 빌드를 다시 실행하세요.
 
 ## 로컬 개발
 
