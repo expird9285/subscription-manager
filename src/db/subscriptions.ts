@@ -39,8 +39,9 @@ export async function createSubscription(db: D1Database, userId: string, input: 
     .prepare(
       `INSERT INTO subscriptions (
          id, user_id, name, category, price, split_count, currency, billing_cycle,
-         next_billing_date, payment_method, status, auto_renew, memo
-       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         next_billing_date, payment_method, payment_card_id, collection_account_id,
+         status, auto_renew, memo
+       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
     .bind(
       id,
@@ -53,6 +54,8 @@ export async function createSubscription(db: D1Database, userId: string, input: 
       input.billing_cycle,
       input.next_billing_date,
       input.payment_method,
+      input.payment_card_id,
+      input.collection_account_id,
       input.status,
       input.auto_renew ? 1 : 0,
       input.memo,
@@ -72,8 +75,8 @@ export async function updateSubscription(
     .prepare(
       `UPDATE subscriptions SET
          name = ?, category = ?, price = ?, split_count = ?, currency = ?, billing_cycle = ?,
-         next_billing_date = ?, payment_method = ?, status = ?, auto_renew = ?, memo = ?,
-         updated_at = ${NOW}
+         next_billing_date = ?, payment_method = ?, payment_card_id = ?, collection_account_id = ?,
+         status = ?, auto_renew = ?, memo = ?, updated_at = ${NOW}
        WHERE id = ? AND user_id = ?`,
     )
     .bind(
@@ -85,6 +88,8 @@ export async function updateSubscription(
       input.billing_cycle,
       input.next_billing_date,
       input.payment_method,
+      input.payment_card_id,
+      input.collection_account_id,
       input.status,
       input.auto_renew ? 1 : 0,
       input.memo,
@@ -166,26 +171,77 @@ export function listUserSubscriptionsByStatus(
   );
 }
 
-/** Subscriptions of every user that may need a billing alert between `from` and `to`. */
+type AlertCandidateRow = SubscriptionRow & {
+  owner_discord_id: string;
+  card_name: string | null;
+  account_bank_name: string | null;
+  account_nickname: string | null;
+};
+
+export type AlertCandidate = Subscription & {
+  owner_discord_id: string;
+  card_name: string | null;
+  account_bank_name: string | null;
+  account_nickname: string | null;
+};
+
+/**
+ * Subscriptions of every user that may need a billing alert between `from` and `to`,
+ * with the charged card and the account behind it.
+ */
 export async function listAlertCandidates(
   db: D1Database,
   from: string,
   to: string,
   statuses: readonly SubscriptionStatus[],
-) {
+): Promise<AlertCandidate[]> {
   const { results } = await db
     .prepare(
-      `SELECT subscriptions.*, users.discord_id AS owner_discord_id
-       FROM subscriptions JOIN users ON users.id = subscriptions.user_id
+      `SELECT subscriptions.*, users.discord_id AS owner_discord_id,
+              payment_cards.name AS card_name,
+              bank_accounts.bank_name AS account_bank_name,
+              bank_accounts.nickname AS account_nickname
+       FROM subscriptions
+       JOIN users ON users.id = subscriptions.user_id
+       LEFT JOIN payment_cards
+         ON payment_cards.id = subscriptions.payment_card_id
+        AND payment_cards.user_id = subscriptions.user_id
+       LEFT JOIN bank_accounts
+         ON bank_accounts.id = payment_cards.bank_account_id
+        AND bank_accounts.user_id = subscriptions.user_id
        WHERE subscriptions.next_billing_date BETWEEN ? AND ?
          AND subscriptions.auto_renew = 1
          AND subscriptions.status IN (${placeholders(statuses)})
        ORDER BY subscriptions.next_billing_date, subscriptions.name`,
     )
     .bind(from, to, ...statuses)
-    .all<SubscriptionRow & { owner_discord_id: string }>();
+    .all<AlertCandidateRow>();
 
-  return results.map((row) => ({ ...fromRow(row), owner_discord_id: row.owner_discord_id }));
+  return results.map((row) => {
+    const { owner_discord_id, card_name, account_bank_name, account_nickname, ...rest } = row;
+    return { ...fromRow(rest), owner_discord_id, card_name, account_bank_name, account_nickname };
+  });
+}
+
+export async function setShareToken(
+  db: D1Database,
+  userId: string,
+  id: string,
+  token: string | null,
+) {
+  const result = await db
+    .prepare(`UPDATE subscriptions SET share_token = ?, updated_at = ${NOW} WHERE id = ? AND user_id = ?`)
+    .bind(token, id, userId)
+    .run();
+  return result.meta.changes > 0;
+}
+
+export async function getSubscriptionByShareToken(db: D1Database, token: string) {
+  const row = await db
+    .prepare("SELECT * FROM subscriptions WHERE share_token = ?")
+    .bind(token)
+    .first<SubscriptionRow>();
+  return row ? fromRow(row) : null;
 }
 
 export async function countSubscriptions(db: D1Database, userId: string) {

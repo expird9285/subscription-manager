@@ -9,12 +9,15 @@ export {
   ChartPie,
   CircleCheck,
   Clock,
+  Copy,
   CreditCard,
   Crown,
   Database,
   Download,
   KeyRound,
+  Landmark,
   LayoutDashboard,
+  Link,
   LogOut,
   Menu,
   MessageCircle,
@@ -28,6 +31,7 @@ export {
   Settings,
   ShieldCheck,
   Trash,
+  Wallet,
   X,
 } from "lucide";
 

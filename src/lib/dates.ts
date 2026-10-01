@@ -84,6 +84,13 @@ export function addDays(isoDate: string, days: number) {
   return fromUtcMs(toUtcMs(isoDate) + days * DAY_MS);
 }
 
+/** Adds calendar months, clamping to the last day of shorter months (Jan 31 + 1 → Feb 28). */
+export function addMonths(isoDate: string, months: number) {
+  const [year, month, day] = isoDate.split("-").map(Number) as [number, number, number];
+  const lastDay = new Date(Date.UTC(year, month - 1 + months + 1, 0)).getUTCDate();
+  return fromUtcMs(Date.UTC(year, month - 1 + months, Math.min(day, lastDay)));
+}
+
 export function monthKey(isoDate: string) {
   return isoDate.slice(0, 7);
 }

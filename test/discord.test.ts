@@ -34,6 +34,8 @@ function subscriptionInput(overrides: Partial<Parameters<typeof createSubscripti
     billing_cycle: "monthly" as const,
     next_billing_date: addDays(TODAY, 3),
     payment_method: null,
+    payment_card_id: null as string | null,
+    collection_account_id: null as string | null,
     status: "active" as const,
     auto_renew: true,
     memo: null,
@@ -163,10 +165,10 @@ describe("billing alerts", () => {
 
     const contents = fetchSpy.mock.calls.map(([, init]) => JSON.parse(String(init?.body)).content as string);
     expect(contents).toEqual([
-      expect.stringMatching(/^\[오늘 결제\] \*\*DDAY\*\*/),
-      expect.stringMatching(/^\[D-1\] \*\*D1\*\*/),
-      expect.stringMatching(/^\[D-3\] \*\*D3\*\*/),
-      expect.stringMatching(/^\[D-7\] \*\*D7\*\*/),
+      "오늘 **DDAY** 구독이 결제돼요. 결제 계좌에 **17,000원** 이상 채워져 있는지 확인해 주세요.",
+      "1일 뒤에 **D1** 구독이 결제돼요. 결제 계좌에 **17,000원** 이상 채워져 있는지 확인해 주세요.",
+      "3일 뒤에 **D3** 구독이 결제돼요. 결제 계좌에 **17,000원** 이상 채워져 있는지 확인해 주세요.",
+      "7일 뒤에 **D7** 구독이 결제돼요. 결제 계좌에 **17,000원** 이상 채워져 있는지 확인해 주세요.",
     ]);
     const firstCall = fetchSpy.mock.calls[0]!;
     expect(new Headers(firstCall[1]?.headers).get("authorization")).toBe(`Bot ${env.DISCORD_BOT_TOKEN}`);

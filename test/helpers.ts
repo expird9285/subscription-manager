@@ -10,7 +10,15 @@ export const BASE = "http://localhost";
 
 export async function resetDb() {
   await env.DB.batch(
-    ["notification_logs", "subscriptions", "sessions", "users", "app_state"].map((table) =>
+    [
+      "notification_logs",
+      "subscriptions",
+      "payment_cards",
+      "bank_accounts",
+      "sessions",
+      "users",
+      "app_state",
+    ].map((table) =>
       env.DB.prepare(`DELETE FROM ${table}`),
     ),
   );

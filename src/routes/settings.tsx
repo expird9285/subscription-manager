@@ -3,6 +3,7 @@ import { Hono } from "hono";
 import { requireUser } from "../auth/session";
 import { LAST_ALERT_KEY, sendTestAlert } from "../discord/alerts";
 import { registerCommands } from "../discord/api";
+import { listPaymentMethods } from "../db/payment-methods";
 import { getState } from "../db/state";
 import { countSubscriptions, listSubscriptions } from "../db/subscriptions";
 import { alertHourOf, allowedDiscordIds, discordConfig, timeZoneOf } from "../lib/config";
@@ -72,7 +73,10 @@ export const settingsRoutes = new Hono<AppEnv>()
 
   .get("/export", requireUser, async (c) => {
     const user = c.get("user");
-    const subscriptions = await listSubscriptions(c.env.DB, user.id);
+    const [subscriptions, { accounts, cards }] = await Promise.all([
+      listSubscriptions(c.env.DB, user.id),
+      listPaymentMethods(c.env.DB, user.id),
+    ]);
     const today = todayIn(timeZoneOf(c.env));
 
     c.header("content-disposition", `attachment; filename="subscriptions_${today}.json"`);
@@ -81,5 +85,7 @@ export const settingsRoutes = new Hono<AppEnv>()
       exported_at: new Date().toISOString(),
       user: { discord_id: user.discord_id, username: user.username },
       subscriptions,
+      bank_accounts: accounts,
+      payment_cards: cards,
     });
   });

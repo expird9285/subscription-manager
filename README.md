@@ -13,10 +13,24 @@
 | 접근 제어 | `ALLOWED_DISCORD_IDS`에 있는 Discord 계정만 로그인 가능 (비어 있으면 아무도 로그인할 수 없음) |
 | Discord 봇 | HTTP Interactions 엔드포인트 `/discord/interactions` (Ed25519 서명 검증) |
 | 결제 알림 | Cron Trigger (매시 정각) → `ALERT_HOUR`시 이후 D-7 / D-3 / D-1 / 당일 알림, 중복 발송 방지 |
+| 결제수단 | 출금 계좌와 카드 등록, 계좌별 30일 출금 예정·수금 예정 합계 (`/payments`) |
+| 1/N 수금 | 복사용 정산 문구 + 로그인 없이 보는 공유 링크 (`/s/:token`, 언제든 재발급·끄기) |
 | 환율 | Frankfurter API를 크론에서 갱신해 D1에 저장 (페이지 렌더링은 외부 API를 기다리지 않음) |
 | 도메인 | `manager.ocsar.xyz` (Workers Custom Domain) |
 
 모든 요청은 사용자와 가까운 Cloudflare 엣지에서 처리되고 D1도 APAC에 있어서, 기존 Vercel(`iad1`)과 Supabase(서울) 사이의 왕복 지연이 없습니다.
+
+## 결제수단과 1/N 수금
+
+- **결제수단** 메뉴에서 출금 계좌(은행, 별칭, 계좌번호, 예금주)를 먼저 등록하고, 카드를 만들 때 연결 계좌를 고릅니다.
+- 구독 수정에서 **결제 카드**를 고르면 결제 알림이 아래처럼 바뀝니다. 금액은 카드에서 빠져나가는 전체 금액입니다.
+
+  > 3일 뒤에 **넷플릭스** 구독이 결제돼요. **현대카드**에 연결된 계좌(국민은행 월급통장)에 **17,000원** 이상 채워져 있는지 확인해 주세요.
+
+  카드를 고르지 않은 구독은 "기타 결제 수단 메모"를 카드 이름 자리에 쓰고, 그것도 없으면 "결제 계좌에"라고 보냅니다.
+- 결제수단 화면은 앞으로 30일 동안 계좌별로 빠져나갈 금액과, 1/N 구독에서 그 계좌로 받을 금액(전체 − 내 부담)을 보여줍니다.
+- 1/N 구독에 **수금 계좌**를 지정하면 구독 목록의 링크 아이콘(수금 안내)에서 정산 문구를 복사하거나 공유 링크를 만들 수 있습니다.
+  공유 링크에는 서비스명, 1인당 금액, 다음 결제일, 입금 계좌만 보이고 메모나 결제 카드는 보이지 않습니다.
 
 ## 처음 배포하기
 
@@ -76,6 +90,7 @@ npm run deploy
 ```
 
 원격 D1에 마이그레이션을 적용하고(`migrations/`), Tailwind CSS를 빌드한 뒤 Worker를 배포합니다. 이후 코드를 바꿨을 때도 같은 명령어를 쓰면 됩니다.
+GitHub 연동으로 배포하는 경우에는 아래 [자동 배포](#자동-배포-선택) 설정을 따르세요.
 
 > 배포하면 결제 알림 크론이 바로 돌기 시작합니다. 알림이 두 번 가지 않도록 **기존 서버의 Python 봇(systemd)과 `check_billing.py` cron을 먼저 중지**하세요.
 
@@ -112,8 +127,16 @@ rm supabase-export.sql
 
 ## 자동 배포 (선택)
 
-Cloudflare 대시보드 → Workers & Pages → `subscription-manager` → **Settings → Builds**에서 GitHub 저장소를 연결하면 push할 때마다 배포됩니다.
-Deploy command를 `npm run deploy`로 지정하면 마이그레이션도 함께 적용됩니다.
+Cloudflare 대시보드 → Workers & Pages에서 GitHub 저장소를 연결하면 `main`에 push할 때마다 배포됩니다.
+
+| 항목 | 값 |
+| --- | --- |
+| 빌드 명령 | `npm run build:css` (Git 연동 빌드는 `wrangler.jsonc`의 `build.command`를 실행하지 않습니다) |
+| 배포 명령 | `npx wrangler deploy` |
+
+- 자동 생성되는 빌드용 API 토큰에는 D1 권한이 없으므로 배포 명령에 `npm run deploy`(마이그레이션 포함)를 쓰면 실패합니다.
+  새 마이그레이션을 추가했을 때는 로컬에서 `npm run db:migrate:remote`를 실행하세요. (`0001_initial_schema.sql`은 이미 적용되어 있습니다.)
+- 시크릿을 등록하기 전의 첫 빌드는 `Missing required secrets`로 실패합니다. Worker → **설정 → 변수 및 비밀**에서 시크릿 6개를 "비밀" 유형으로 추가한 뒤 빌드를 다시 실행하세요.
 
 ## 로컬 개발
 
@@ -159,7 +182,7 @@ npx wrangler deploy --dry-run    # 번들과 바인딩 확인
 src/
   index.tsx            Hono 앱, 라우트 연결, 크론 핸들러
   routes/              로그인/OAuth, 구독 CRUD, 설정 라우트
-  views/               JSX 레이아웃, UI 컴포넌트, 페이지
+  views/               JSX 레이아웃, UI 컴포넌트, 페이지 (결제수단, 수금 안내, 공개 공유 페이지 포함)
   auth/                Discord OAuth, 세션 쿠키와 미들웨어
   db/                  D1 쿼리 (사용자, 세션, 구독, 알림 기록, 상태)
   discord/             Interactions 서명 검증, 명령어, 알림, REST 호출
