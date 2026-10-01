@@ -1,8 +1,9 @@
+import { daysBetween, monthKeysFrom } from "./dates";
 import type {
   BillingCycle,
   Subscription,
   SubscriptionStatus,
-} from "@/lib/database.types";
+} from "./types";
 
 export const billingCycleLabels: Record<BillingCycle, string> = {
   monthly: "월간",
@@ -20,17 +21,23 @@ export const statusLabels: Record<SubscriptionStatus, string> = {
   trial: "체험",
 };
 
-export const liveStatuses: SubscriptionStatus[] = [
-  "active",
-  "trial",
-  "cancel_pending",
-];
+/** Statuses that still cost money and count towards spending totals. */
+export const liveStatuses: readonly SubscriptionStatus[] = ["active", "trial", "cancel_pending"];
 
-export const alertStatuses: SubscriptionStatus[] = ["active", "trial"];
+/** Statuses that receive billing alerts. */
+export const alertStatuses: readonly SubscriptionStatus[] = ["active", "trial"];
+
+export const UNCATEGORIZED = "미분류";
+
+type Totals = Record<string, number>;
 
 export function toNumber(value: number | string | null | undefined) {
   const parsed = Number(value ?? 0);
   return Number.isFinite(parsed) ? parsed : 0;
+}
+
+export function isLive(subscription: Pick<Subscription, "status">) {
+  return liveStatuses.includes(subscription.status);
 }
 
 export function splitCount(subscription: Pick<Subscription, "split_count">) {
@@ -38,6 +45,7 @@ export function splitCount(subscription: Pick<Subscription, "split_count">) {
   return Number.isInteger(count) && count >= 1 ? count : 1;
 }
 
+/** The user's own share of one billing. */
 export function sharedPrice(subscription: Pick<Subscription, "price" | "split_count">) {
   return toNumber(subscription.price) / splitCount(subscription);
 }
@@ -51,67 +59,70 @@ export function splitLabel(subscription: Pick<Subscription, "split_count">) {
   return count > 1 ? `1/${count} 부담` : "혼자 부담";
 }
 
+/** The user's own share normalised to a monthly amount. */
 export function monthlyAmount(
   subscription: Pick<Subscription, "price" | "billing_cycle" | "split_count">,
 ) {
   const price = sharedPrice(subscription);
 
   switch (subscription.billing_cycle) {
-    case "monthly":
-      return price;
     case "yearly":
       return price / 12;
     case "quarterly":
       return price / 3;
     case "weekly":
       return (price * 52) / 12;
+    case "monthly":
     case "custom":
-      return price;
     default:
-      return 0;
+      return price;
   }
 }
+
+export function normalizeCurrency(currency?: string | null) {
+  return (currency || "KRW").trim().toUpperCase();
+}
+
+const moneyFormatters = new Map<string, Intl.NumberFormat>();
 
 export function formatMoney(amount: number, currency = "KRW") {
-  return new Intl.NumberFormat("ko-KR", {
-    style: "currency",
-    currency,
-    maximumFractionDigits: currency === "KRW" ? 0 : 2,
-  }).format(amount);
-}
+  const code = normalizeCurrency(currency);
+  let formatter = moneyFormatters.get(code);
 
-export function parseLocalDate(dateString: string) {
-  const [year, month, day] = dateString.split("-").map(Number);
-  return new Date(year, month - 1, day);
-}
-
-export function startOfLocalDay(date = new Date()) {
-  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
-}
-
-export function daysUntil(dateString: string, baseDate = new Date()) {
-  const target = parseLocalDate(dateString);
-  const base = startOfLocalDay(baseDate);
-  const diff = target.getTime() - base.getTime();
-  return Math.ceil(diff / 86_400_000);
-}
-
-export function dueLabel(dateString: string, baseDate = new Date()) {
-  const diff = daysUntil(dateString, baseDate);
-
-  if (diff === 0) {
-    return "오늘 결제";
+  if (!formatter) {
+    try {
+      formatter = new Intl.NumberFormat("ko-KR", {
+        style: "currency",
+        currency: code,
+        maximumFractionDigits: code === "KRW" || code === "JPY" ? 0 : 2,
+      });
+    } catch {
+      return `${amount.toLocaleString("ko-KR", { maximumFractionDigits: 2 })} ${code}`;
+    }
+    moneyFormatters.set(code, formatter);
   }
 
-  if (diff > 0) {
-    return `D-${diff}`;
-  }
-
-  return `D+${Math.abs(diff)}`;
+  return formatter.format(amount);
 }
 
-export function isDueWithin(subscription: Subscription, days: number) {
-  const diff = daysUntil(subscription.next_billing_date);
+export function formatTotals(totals: Totals, multiplier = 1) {
+  const entries = Object.entries(totals);
+
+  if (!entries.length) {
+    return [formatMoney(0, "KRW")];
+  }
+
+  return entries.map(([currency, amount]) => formatMoney(amount * multiplier, currency));
+}
+
+function addTo(totals: Totals, currency: string, amount: number) {
+  const code = normalizeCurrency(currency);
+  totals[code] = (totals[code] ?? 0) + amount;
+  return totals;
+}
+
+export function isDueWithin(subscription: Subscription, days: number, today: string) {
+  const diff = daysBetween(today, subscription.next_billing_date);
   return (
     alertStatuses.includes(subscription.status) &&
     subscription.auto_renew &&
@@ -122,31 +133,18 @@ export function isDueWithin(subscription: Subscription, days: number) {
 
 export function groupMonthlyTotalsByCurrency(subscriptions: Subscription[]) {
   return subscriptions
-    .filter((subscription) => liveStatuses.includes(subscription.status))
-    .reduce<Record<string, number>>((totals, subscription) => {
-      const currency = subscription.currency || "KRW";
-      totals[currency] = (totals[currency] ?? 0) + monthlyAmount(subscription);
-      return totals;
-    }, {});
+    .filter(isLive)
+    .reduce<Totals>((totals, item) => addTo(totals, item.currency, monthlyAmount(item)), {});
 }
 
-export function summarizeDashboard(subscriptions: Subscription[]) {
-  const liveSubscriptions = subscriptions.filter((subscription) =>
-    liveStatuses.includes(subscription.status),
-  );
-  const activeCount = subscriptions.filter(
-    (subscription) => subscription.status === "active",
-  ).length;
+export function summarizeDashboard(subscriptions: Subscription[], today: string) {
+  const liveSubscriptions = subscriptions.filter(isLive);
   const dueSoon = subscriptions
-    .filter((subscription) => isDueWithin(subscription, 7))
-    .sort(
-      (a, b) =>
-        parseLocalDate(a.next_billing_date).getTime() -
-        parseLocalDate(b.next_billing_date).getTime(),
-    );
+    .filter((subscription) => isDueWithin(subscription, 7, today))
+    .sort((a, b) => a.next_billing_date.localeCompare(b.next_billing_date));
 
   return {
-    activeCount,
+    activeCount: subscriptions.filter((subscription) => subscription.status === "active").length,
     liveSubscriptions,
     dueSoon,
     nearestDue: dueSoon[0] ?? null,
@@ -154,110 +152,114 @@ export function summarizeDashboard(subscriptions: Subscription[]) {
   };
 }
 
-export function categorySummary(subscriptions: Subscription[]) {
-  return Object.entries(
-    subscriptions
-      .filter((subscription) => liveStatuses.includes(subscription.status))
-      .reduce<Record<string, Record<string, number>>>((totals, subscription) => {
-        const category = subscription.category?.trim() || "미분류";
-        const currency = subscription.currency || "KRW";
-        totals[category] ??= {};
-        totals[category][currency] =
-          (totals[category][currency] ?? 0) + monthlyAmount(subscription);
-        return totals;
-      }, {}),
-  )
-    .map(([category, totals]) => ({ category, totals }))
-    .sort((a, b) => {
-      const aTotal = Object.values(a.totals).reduce((sum, value) => sum + value, 0);
-      const bTotal = Object.values(b.totals).reduce((sum, value) => sum + value, 0);
-      return bTotal - aTotal;
-    });
+function sumTotals(totals: Totals) {
+  return Object.values(totals).reduce((sum, value) => sum + value, 0);
 }
 
-export function formatTotals(totals: Record<string, number>, multiplier = 1) {
-  const entries = Object.entries(totals);
-
-  if (!entries.length) {
-    return [formatMoney(0, "KRW")];
-  }
-
-  return entries.map(([currency, amount]) =>
-    formatMoney(amount * multiplier, currency),
+function groupBy(
+  subscriptions: Subscription[],
+  keyOf: (subscription: Subscription) => string,
+) {
+  return Object.entries(
+    subscriptions.filter(isLive).reduce<Record<string, Totals>>((groups, subscription) => {
+      const key = keyOf(subscription);
+      groups[key] = addTo(groups[key] ?? {}, subscription.currency, monthlyAmount(subscription));
+      return groups;
+    }, {}),
   );
 }
 
+export function categorySummary(subscriptions: Subscription[]) {
+  return groupBy(subscriptions, (item) => item.category?.trim() || UNCATEGORIZED)
+    .map(([category, totals]) => ({ category, totals }))
+    .sort((a, b) => sumTotals(b.totals) - sumTotals(a.totals));
+}
+
+export function billingCycleSummary(subscriptions: Subscription[]) {
+  return groupBy(subscriptions, (item) => billingCycleLabels[item.billing_cycle]).map(
+    ([cycle, totals]) => ({ cycle, totals }),
+  );
+}
+
+/** The user's share of bills scheduled in each of the next `months` months. */
+export function scheduledMonthlyTotals(subscriptions: Subscription[], today: string, months = 6) {
+  const live = subscriptions.filter(isLive);
+
+  return monthKeysFrom(today, months).map((key) => ({
+    key,
+    totals: live
+      .filter((subscription) => subscription.next_billing_date.startsWith(key))
+      .reduce<Totals>((acc, item) => addTo(acc, item.currency, sharedPrice(item)), {}),
+  }));
+}
+
+export function categoriesOf(subscriptions: Subscription[]) {
+  return Array.from(
+    new Set(subscriptions.map((subscription) => subscription.category || UNCATEGORIZED)),
+  ).sort((a, b) => a.localeCompare(b, "ko-KR"));
+}
+
+export const sortOptions = {
+  next_billing_asc: "결제일 가까운 순",
+  price_desc: "가격 높은 순",
+  monthly_desc: "월 부담 높은 순",
+  name_asc: "이름순",
+} as const;
+
+export type SortOption = keyof typeof sortOptions;
+
 export type SubscriptionFilters = {
-  query?: string;
-  category?: string;
-  status?: string;
-  billingCycle?: string;
-  sort?: string;
+  query: string;
+  category: string;
+  status: string;
+  billingCycle: string;
+  sort: SortOption;
 };
+
+export function parseFilters(params: Record<string, string | undefined>): SubscriptionFilters {
+  const sort = params.sort && params.sort in sortOptions ? (params.sort as SortOption) : "next_billing_asc";
+  return {
+    query: params.q?.trim() ?? "",
+    category: params.category ?? "",
+    status: params.status ?? "",
+    billingCycle: params.billingCycle ?? "",
+    sort,
+  };
+}
 
 export function filterAndSortSubscriptions(
   subscriptions: Subscription[],
   filters: SubscriptionFilters,
 ) {
-  const query = filters.query?.trim().toLowerCase();
+  const query = filters.query.toLowerCase();
 
-  const filtered = subscriptions.filter((subscription) => {
-    if (query && !subscription.name.toLowerCase().includes(query)) {
-      return false;
-    }
-
-    if (filters.category && (subscription.category || "미분류") !== filters.category) {
-      return false;
-    }
-
-    if (filters.status && subscription.status !== filters.status) {
-      return false;
-    }
-
-    if (filters.billingCycle && subscription.billing_cycle !== filters.billingCycle) {
-      return false;
-    }
-
-    return true;
-  });
-
-  return filtered.sort((a, b) => {
-    switch (filters.sort) {
-      case "price_desc":
-        return toNumber(b.price) - toNumber(a.price);
-      case "monthly_desc":
-        return monthlyAmount(b) - monthlyAmount(a);
-      case "name_asc":
-        return a.name.localeCompare(b.name, "ko-KR");
-      case "next_billing_asc":
-      default:
-        return (
-          parseLocalDate(a.next_billing_date).getTime() -
-          parseLocalDate(b.next_billing_date).getTime()
-        );
-    }
-  });
-}
-
-export function monthKey(date: Date) {
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
-}
-
-export function scheduledMonthlyTotals(subscriptions: Subscription[], months = 6) {
-  const start = startOfLocalDay();
-
-  return Array.from({ length: months }, (_, index) => {
-    const date = new Date(start.getFullYear(), start.getMonth() + index, 1);
-    const key = monthKey(date);
-    const totals = subscriptions
-      .filter((subscription) => liveStatuses.includes(subscription.status))
-      .filter((subscription) => subscription.next_billing_date.startsWith(key))
-      .reduce<Record<string, number>>((acc, subscription) => {
-        const currency = subscription.currency || "KRW";
-        acc[currency] = (acc[currency] ?? 0) + sharedPrice(subscription);
-        return acc;
-      }, {});
-
-    return { key, totals };
-  });
+  return subscriptions
+    .filter((subscription) => {
+      if (query && !subscription.name.toLowerCase().includes(query)) {
+        return false;
+      }
+      if (filters.category && (subscription.category || UNCATEGORIZED) !== filters.category) {
+        return false;
+      }
+      if (filters.status && subscription.status !== filters.status) {
+        return false;
+      }
+      if (filters.billingCycle && subscription.billing_cycle !== filters.billingCycle) {
+        return false;
+      }
+      return true;
+    })
+    .sort((a, b) => {
+      switch (filters.sort) {
+        case "price_desc":
+          return toNumber(b.price) - toNumber(a.price);
+        case "monthly_desc":
+          return monthlyAmount(b) - monthlyAmount(a);
+        case "name_asc":
+          return a.name.localeCompare(b.name, "ko-KR");
+        case "next_billing_asc":
+        default:
+          return a.next_billing_date.localeCompare(b.next_billing_date);
+      }
+    });
 }

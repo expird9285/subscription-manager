@@ -1,10 +1,13 @@
-import "server-only";
+import { getState, setState } from "../db/state";
+import { formatMoney, normalizeCurrency, toNumber } from "./subscriptions";
 
-import type { Subscription } from "@/lib/database.types";
-import { formatMoney, toNumber } from "@/lib/subscriptions";
+const STATE_KEY = "exchange_rates";
+const RATES_URL = "https://api.frankfurter.dev/v1/latest";
+const FETCH_TIMEOUT_MS = 3000;
+const REFRESH_AFTER_MS = 6 * 60 * 60 * 1000;
 
-const TARGET_CURRENCY = "KRW";
-const FALLBACK_RATES_TO_KRW: Record<string, number> = {
+/** Rough KRW values used only when no live snapshot has ever been fetched. */
+const FALLBACK_KRW_PER_UNIT: Record<string, number> = {
   USD: 1365,
   EUR: 1480,
   JPY: 9.4,
@@ -15,104 +18,117 @@ const FALLBACK_RATES_TO_KRW: Record<string, number> = {
 };
 
 export type ExchangeRates = {
-  base: typeof TARGET_CURRENCY;
+  /** Reference date of the rates (YYYY-MM-DD). */
   date: string;
-  rates: Record<string, number>;
+  /** How many KRW one unit of each currency is worth. */
+  krwPerUnit: Record<string, number>;
   source: "live" | "fallback";
+  fetchedAt: string | null;
 };
 
 type FrankfurterResponse = {
+  base?: string;
   date?: string;
   rates?: Record<string, number>;
 };
 
-function normalizeCurrency(currency?: string | null) {
-  return (currency || TARGET_CURRENCY).trim().toUpperCase();
+export function fallbackRates(date = new Date().toISOString().slice(0, 10)): ExchangeRates {
+  return { date, krwPerUnit: { ...FALLBACK_KRW_PER_UNIT }, source: "fallback", fetchedAt: null };
 }
 
-export async function getExchangeRates(): Promise<ExchangeRates> {
+/** Fetches EUR-based rates (better precision than KRW-based) and converts them to KRW per unit. */
+export async function fetchLatestRates(): Promise<ExchangeRates> {
+  const response = await fetch(RATES_URL, {
+    signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+    headers: { accept: "application/json" },
+  });
+
+  if (!response.ok) {
+    throw new Error(`Exchange rate request failed: ${response.status}`);
+  }
+
+  const data = (await response.json()) as FrankfurterResponse;
+  const base = normalizeCurrency(data.base ?? "EUR");
+  const rates: Record<string, number> = { ...(data.rates ?? {}), [base]: 1 };
+  const krwPerBase = Number(rates.KRW);
+
+  if (!Number.isFinite(krwPerBase) || krwPerBase <= 0) {
+    throw new Error("Exchange rate response did not include KRW");
+  }
+
+  const krwPerUnit: Record<string, number> = {};
+  for (const [currency, rate] of Object.entries(rates)) {
+    const perBase = Number(rate);
+    if (Number.isFinite(perBase) && perBase > 0 && currency.toUpperCase() !== "KRW") {
+      krwPerUnit[currency.toUpperCase()] = krwPerBase / perBase;
+    }
+  }
+
+  return {
+    date: data.date ?? new Date().toISOString().slice(0, 10),
+    krwPerUnit,
+    source: "live",
+    fetchedAt: new Date().toISOString(),
+  };
+}
+
+export async function refreshExchangeRates(db: D1Database) {
+  const rates = await fetchLatestRates();
+  await setState(db, STATE_KEY, rates);
+  return rates;
+}
+
+function isStale(rates: ExchangeRates) {
+  return !rates.fetchedAt || Date.now() - Date.parse(rates.fetchedAt) > REFRESH_AFTER_MS;
+}
+
+export async function refreshExchangeRatesIfStale(db: D1Database) {
+  const stored = await getState<ExchangeRates>(db, STATE_KEY);
+  if (stored && !isStale(stored.value)) {
+    return stored.value;
+  }
+  return refreshExchangeRates(db);
+}
+
+/**
+ * Reads the stored snapshot (refreshed hourly by the cron trigger). Page renders never
+ * block on the external API unless no snapshot exists yet.
+ */
+export async function getExchangeRates(
+  db: D1Database,
+  waitUntil?: (promise: Promise<unknown>) => void,
+): Promise<ExchangeRates> {
+  const stored = await getState<ExchangeRates>(db, STATE_KEY).catch(() => null);
+
+  if (stored) {
+    if (isStale(stored.value) && waitUntil) {
+      waitUntil(refreshExchangeRates(db).catch(() => undefined));
+    }
+    return stored.value;
+  }
+
   try {
-    const response = await fetch(
-      `https://api.frankfurter.app/latest?from=${TARGET_CURRENCY}`,
-      {
-        next: { revalidate: 60 * 60 * 6 },
-      },
-    );
-
-    if (!response.ok) {
-      throw new Error(`Exchange rate request failed: ${response.status}`);
-    }
-
-    const data = (await response.json()) as FrankfurterResponse;
-    const rates = Object.fromEntries(
-      Object.entries(data.rates ?? {}).flatMap(([currency, rate]) => {
-        const parsedRate = Number(rate);
-
-        return Number.isFinite(parsedRate) && parsedRate > 0
-          ? [[currency.toUpperCase(), parsedRate]]
-          : [];
-      }),
-    );
-
-    if (!Object.keys(rates).length) {
-      throw new Error("Exchange rate response did not include rates");
-    }
-
-    return {
-      base: TARGET_CURRENCY,
-      date: data.date ?? new Date().toISOString().slice(0, 10),
-      rates,
-      source: "live",
-    };
+    return await refreshExchangeRates(db);
   } catch {
-    return {
-      base: TARGET_CURRENCY,
-      date: new Date().toISOString().slice(0, 10),
-      rates: Object.fromEntries(
-        Object.entries(FALLBACK_RATES_TO_KRW).map(([currency, krwPerUnit]) => [
-          currency,
-          1 / krwPerUnit,
-        ]),
-      ),
-      source: "fallback",
-    };
+    return fallbackRates();
   }
 }
 
 export function convertToKrw(amount: number, currency: string, rates: ExchangeRates) {
-  const normalizedCurrency = normalizeCurrency(currency);
-
-  if (normalizedCurrency === TARGET_CURRENCY) {
+  const code = normalizeCurrency(currency);
+  if (code === "KRW") {
     return amount;
   }
-
-  const krwToCurrencyRate = rates.rates[normalizedCurrency];
-
-  if (!krwToCurrencyRate) {
-    return null;
-  }
-
-  return amount / krwToCurrencyRate;
+  const krwPerUnit = rates.krwPerUnit[code];
+  return krwPerUnit ? amount * krwPerUnit : null;
 }
 
-export function formatKrwEstimate(
-  amount: number,
-  currency: string,
-  rates: ExchangeRates,
-) {
-  const normalizedCurrency = normalizeCurrency(currency);
-
-  if (normalizedCurrency === TARGET_CURRENCY) {
+export function formatKrwEstimate(amount: number, currency: string, rates: ExchangeRates) {
+  if (normalizeCurrency(currency) === "KRW") {
     return null;
   }
-
-  const estimated = convertToKrw(amount, normalizedCurrency, rates);
-
-  if (estimated === null) {
-    return "원화 환산 불가";
-  }
-
-  return `예상 ${formatMoney(estimated, TARGET_CURRENCY)}`;
+  const estimated = convertToKrw(amount, currency, rates);
+  return estimated === null ? "원화 환산 불가" : `예상 ${formatMoney(estimated, "KRW")}`;
 }
 
 export function convertTotalsToKrw(
@@ -121,26 +137,16 @@ export function convertTotalsToKrw(
   multiplier = 1,
 ) {
   return Object.entries(totals).reduce((sum, [currency, amount]) => {
-    const converted = convertToKrw(toNumber(amount) * multiplier, currency, rates);
-    return sum + (converted ?? 0);
+    return sum + (convertToKrw(toNumber(amount) * multiplier, currency, rates) ?? 0);
   }, 0);
 }
 
 export function hasForeignCurrency(totals: Record<string, number>) {
-  return Object.keys(totals).some(
-    (currency) => normalizeCurrency(currency) !== TARGET_CURRENCY,
-  );
+  return Object.keys(totals).some((currency) => normalizeCurrency(currency) !== "KRW");
 }
 
 export function exchangeRateDetail(rates: ExchangeRates) {
   return rates.source === "live"
     ? `환율 기준일 ${rates.date}`
     : `환율 API 실패로 임시 환율 적용 (${rates.date})`;
-}
-
-export function subscriptionKrwEstimate(
-  subscription: Pick<Subscription, "price" | "currency">,
-  rates: ExchangeRates,
-) {
-  return formatKrwEstimate(toNumber(subscription.price), subscription.currency, rates);
 }
